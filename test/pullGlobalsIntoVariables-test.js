@@ -1,8 +1,8 @@
 var vows = require('vows'),
     assert = require('assert'),
     AssetGraph = require('../lib'),
-    uglifyAst = AssetGraph.JavaScript.uglifyAst,
-    uglifyJs = AssetGraph.JavaScript.uglifyJs;
+    uglifyJs = require('uglify-js-papandreou'),
+    uglifyAst = require('uglifyast')(uglifyJs);
 
 function getFunctionBodySource(fn) {
     var outputStream = uglifyJs.OutputStream({beautify: true});

@@ -4,8 +4,8 @@ var vows = require('vows'),
     fs = require('fs'),
     path = require('path'),
     AssetGraph = require('../lib'),
-    uglifyJs = AssetGraph.JavaScript.uglifyJs,
-    uglifyAst = AssetGraph.JavaScript.uglifyAst;
+    uglifyJs = require('uglify-js-papandreou'),
+    uglifyAst = require('uglifyast')(uglifyJs);
 
 function toAst(functionOrAst) {
     if (typeof functionOrAst === 'function') {

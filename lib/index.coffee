@@ -58,7 +58,8 @@ class AssetGraph extends EventEmitter
   constructor: (options) ->
     _.extend this, options
     
-    # this.root might be undefined, in which case urlTools.urlOrFsPathToUrl will use process.cwd()
+    # this.root might be undefined, in which case urlTools.urlOrFsPathToUrl
+    # will use process.cwd()
     @root = urlTools.urlOrFsPathToUrl(@root, true) # ensureTrailingSlash
     @resolverByProtocol =
       data: @resolvers.data()
@@ -100,7 +101,8 @@ class AssetGraph extends EventEmitter
         "Asset"
 
   createAsset: (assetConfig) ->
-    throw new Error("AssetGraph.create: No type provided in assetConfig" + util.inspect(assetConfig))  unless assetConfig.type
+    unless assetConfig.type
+      throw new Error("AssetGraph.create: No type provided in assetConfig" + util.inspect(assetConfig))
     if assetConfig.isAsset
       assetConfig
     else
@@ -136,9 +138,11 @@ class AssetGraph extends EventEmitter
         @addAsset _asset
       ), this
       return
-    throw new Error("AssetGraph.addAsset: #{asset} is not an asset or an asset config object")  if not asset or typeof asset isnt "object"
+    if not asset or typeof asset isnt "object"
+      throw new Error("AssetGraph.addAsset: #{asset} is not an asset or an asset config object")
     asset = @createAsset(asset)  unless asset.isAsset
-    throw new Error("AssetGraph.addAsset: #{asset} is already in graph (id already in idIndex)")  if asset.id of @idIndex
+    if asset.id of @idIndex
+      throw new Error("AssetGraph.addAsset: #{asset} is already in graph (id already in idIndex)")
     @idIndex[asset.id] = asset
     @_assets.push asset
     @_objInBaseAssetPaths[asset.id] = []
@@ -156,7 +160,8 @@ class AssetGraph extends EventEmitter
   outgoing relations of the asset.
   
   @param {Asset} asset The asset to remove.
-  @param {Boolean} detachIncomingRelations Whether to also detach the incoming relations before removal (defaults to false).
+  @param {Boolean} detachIncomingRelations Whether to also detach the incoming
+      relations before removal (defaults to false).
   @return {AssetGraph} The AssetGraph instance (chaining-friendly).
   ###
   removeAsset: (asset, detachIncomingRelations) ->
@@ -212,7 +217,8 @@ class AssetGraph extends EventEmitter
   
   @param {Relation} relation The relation to add to the graph.
   @param {String} position "first", "last", "before", or "after".
-  @param {Relation} adjacentRelation The adjacent relation, mandatory if position is "before" or "after".
+  @param {Relation} adjacentRelation The adjacent relation, mandatory if
+      position is "before" or "after".
   @return {AssetGraph} The AssetGraph instance (chaining-friendly).
   @api private
   ###
@@ -222,11 +228,16 @@ class AssetGraph extends EventEmitter
         @addRelation _relation, position, adjacentRelation
       ), this
       return
-    throw new Error("AssetGraph.addRelation: Not a relation: " + relation)  if not relation or not relation.id or not relation.isRelation
-    throw new Error("AssetGraph.addRelation: Relation already in graph: " + relation)  if relation.id of @idIndex
-    throw new Error("AssetGraph.addRelation: 'from' property of relation is not an asset: " + relation.from)  if not relation.from or not relation.from.isAsset
-    throw new Error("AssetGraph.addRelation: 'from' property of relation is not in the graph: " + relation.from)  unless relation.from.id of @idIndex
-    throw new Error("AssetGraph.addRelation: 'to' property of relation is missing")  unless relation.to
+    if not relation or not relation.id or not relation.isRelation
+      throw new Error("AssetGraph.addRelation: Not a relation: " + relation)
+    if relation.id of @idIndex
+      throw new Error("AssetGraph.addRelation: Relation already in graph: " + relation)
+    if not relation.from or not relation.from.isAsset
+      throw new Error("AssetGraph.addRelation: 'from' property of relation is not an asset: " + relation.from)
+    unless relation.from.id of @idIndex
+      throw new Error("AssetGraph.addRelation: 'from' property of relation is not in the graph: " + relation.from)
+    unless relation.to
+      throw new Error("AssetGraph.addRelation: 'to' property of relation is missing")
     position = position or "last"
     relation.assetGraph = this
     if position is "last"
@@ -234,9 +245,11 @@ class AssetGraph extends EventEmitter
     else if position is "first"
       @_relations.unshift relation
     else if position is "before" or position is "after" # Assume 'before' or 'after'
-      throw new Error("AssetGraph.addRelation: Adjacent relation is not a relation: " + adjacentRelation)  if not adjacentRelation or not adjacentRelation.isRelation
+      if not adjacentRelation or not adjacentRelation.isRelation
+        throw new Error("AssetGraph.addRelation: Adjacent relation is not a relation: " + adjacentRelation)
       i = @_relations.indexOf(adjacentRelation) + ((if position is "after" then 1 else 0))
-      throw new Error("AssetGraph.addRelation: Adjacent relation is not in the graph: " + adjacentRelation)  if i is -1
+      if i is -1
+        throw new Error("AssetGraph.addRelation: Adjacent relation is not in the graph: " + adjacentRelation)
       @_relations.splice i, 0, relation
     else
       throw new Error("AssetGraph.addRelation: Illegal 'position' argument: " + position)
@@ -258,8 +271,10 @@ class AssetGraph extends EventEmitter
   @api public
   ###
   removeRelation: (relation) ->
-    throw new Error("AssetGraph.removeRelation: Not a relation: " + relation)  if not relation or not relation.isRelation
-    throw new Error("AssetGraph.removeRelation: " + relation + " not in graph")  unless relation.id of @idIndex
+    if not relation or not relation.isRelation
+      throw new Error("AssetGraph.removeRelation: Not a relation: " + relation)
+    unless relation.id of @idIndex
+      throw new Error("AssetGraph.removeRelation: " + relation + " not in graph")
     affectedRelations = [].concat(@_objInBaseAssetPaths[relation.id])
     affectedRelations.forEach ((affectedRelation) ->
       affectedRelation._unregisterBaseAssetPath()
@@ -335,7 +350,8 @@ class AssetGraph extends EventEmitter
   });
   
   @param {Object} queryObj (optional). Will match all relations if not provided.
-  @param {Boolean} includeUnpopulated (optional). Whether to also consider relations that weren't followed during population. Defaults to false.
+  @param {Boolean} includeUnpopulated (optional). Whether to also consider
+      relations that weren't followed during population. Defaults to false.
   @return {Array} The found relations.
   @api public
   ###
@@ -408,21 +424,17 @@ class AssetGraph extends EventEmitter
       )["catch"](cb)
     if typeof assetConfig is "string"
       if /^[\w\+]+:/.test(assetConfig)
-        
         # Includes protocol, assume url
         assetConfig = url: assetConfig
       else
-        
         # File system path
         assetConfig = url: encodeURI(assetConfig)
     if assetConfig.isAsset or assetConfig.isResolved
-      
       # Almost done, add .type property if possible (this is all we can do
       # without actually fetching the asset):
       assetConfig.type = assetConfig.type or (assetConfig.contentType and @lookupContentType(assetConfig.contentType)) or @typeByExtension[Path.extname(assetConfig.url.replace(/[\?\#].*$/, '')).toLowerCase()]
       setImmediate ->
         cb null, assetConfig
-
     else if assetConfig.url
       if /^[a-zA-Z\+]+:/.test(assetConfig.url)
         protocol = assetConfig.url.substr(0, assetConfig.url.indexOf(":")).toLowerCase()
@@ -523,7 +535,8 @@ class AssetGraph extends EventEmitter
       startRelation = startAssetOrRelation
       startAsset = startRelation.to
     else
-      # incomingRelation will be undefined when (pre|post)OrderLambda(startAsset) is called
+      # incomingRelation will be undefined when
+      # (pre|post)OrderLambda(startAsset) is called
       startAsset = startAssetOrRelation
     seenAssets = {}
     assetStack = []
@@ -533,7 +546,8 @@ class AssetGraph extends EventEmitter
         seenAssets[asset.id] = true
         assetStack.push asset
         that.findRelations(_.extend(from: asset)).forEach (relation) ->
-          traverse relation.to, relation if not relationQueryMatcher or relationQueryMatcher(relation)
+          if not relationQueryMatcher or relationQueryMatcher(relation)
+            traverse relation.to, relation
 
         previousAsset = assetStack.pop()
         postOrderLambda previousAsset, incomingRelation if postOrderLambda
@@ -573,7 +587,7 @@ class AssetGraph extends EventEmitter
       callbackCalled = false
       transform that, (err) ->
         if callbackCalled
-          console.warn "AssetGraph._runTransform: The transform " + transform.name + " called the callback more than once!"
+          console.warn "AssetGraph._runTransform: The transform #{transform.name} called the callback more than once!"
         else
           callbackCalled = true
           done err
@@ -596,7 +610,8 @@ class AssetGraph extends EventEmitter
       @transforms.push @transforms[name].apply(this, arguments)  if not @conditions.length or @conditions[@conditions.length - 1]
       this
 
-    # Make assetGraph.<transformName>(options) a shorthand for creating a new TransformQueue:
+    # Make assetGraph.<transformName>(options) a shorthand for creating a new
+    # TransformQueue:
     @[name] = ->
       transformQueue = new TransformQueue(this)
       transformQueue[name].apply transformQueue, arguments
@@ -609,7 +624,7 @@ class AssetGraph extends EventEmitter
     Constructor::["is" + type] = true
     if prototype.contentType
       if prototype.contentType of @typeByContentType
-        console.warn "#{type}: Redefinition of Content-Type " + prototype.contentType
+        console.warn "#{type}: Redefinition of Content-Type #{prototype.contentType}"
         console.trace()
       @typeByContentType[prototype.contentType] = type
     if prototype.supportedExtensions
@@ -631,7 +646,9 @@ class AssetGraph extends EventEmitter
         Constructor = require(fileNameOrConstructor)
         Constructor::type = type
         Constructor
-      fileNameRegex = ((if os.platform() is "win32" then /\\([^\\]+)\.js$/ else /\/([^\/]+)\.js$/))
+      fileNameRegex = (
+        if os.platform() is "win32" then /\\([^\\]+)\.js$/ else /\/([^\/]+)\.js$/
+      )
       type = type or fileNameOrConstructor.match(fileNameRegex)[1]
       @__defineGetter__ type, getter
 

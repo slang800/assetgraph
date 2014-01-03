@@ -1,8 +1,7 @@
 var vows = require('vows'),
     assert = require('assert'),
     AssetGraph = require('../lib'),
-    uglifyJs = AssetGraph.JavaScript.uglifyJs,
-    uglifyAst = AssetGraph.JavaScript.uglifyAst;
+    uglifyJs = require('uglify-js-papandreou');
 
 vows.describe('HtmlDataBindAttribute test').addBatch({
     'After loading test case': {
