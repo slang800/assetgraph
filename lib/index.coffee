@@ -12,93 +12,100 @@ TransformQueue = require("./TransformQueue")
 
 setImmediate = process.nextTick if typeof setImmediate is "undefined"
 
-###
-@class AssetGraph
-@extends EventEmitter
-###
-
-###
-new AssetGraph([options])
-=========================
-
-Create a new AssetGraph instance.
-
-Options:
-
-- `root` (optional) The root URL of the graph, either as a fully
-qualified `file:` or `http:` url or file system
-path. Defaults to the current directory,
-ie. `file://<process.cwd()>/`. The purpose of the root
-option is to allow resolution of root-relative urls
-(eg. `<a href="/foo.html">`) from `file:` locations.
-- `dieOnError` (optional) Whether to throw an exception or keep
-going when any error is encountered. Defaults to false.
-
-Examples:
-
-new AssetGraph()
-// => root: "file:///current/working/dir/"
-
-new AssetGraph({root: '/absolute/fs/path'});
-// => root: "file:///absolute/fs/path/"
-
-new AssetGraph({root: 'relative/path'})
-// => root: "file:///current/working/dir/relative/path/"
-
-@constructor AssetGraph
-@param {Object} options
-@api public
-###
 class AssetGraph extends EventEmitter
+  resolvers: require("./resolvers")
+  
+  query: require("./query")
+  
+  _assets: []
+  _relations: []
+  _objInBaseAssetPaths: {}
+  _relationsWithNoBaseAsset: []
+  idIndex: {}
+
+  ###
+  new AssetGraph([options])
+  =========================
+
+  Create a new AssetGraph instance.
+
+  Options:
+
+  - `root` (optional) The root URL of the graph, either as a fully
+  qualified `file:` or `http:` url or file system
+  path. Defaults to the current directory,
+  ie. `file://<process.cwd()>/`. The purpose of the root
+  option is to allow resolution of root-relative urls
+  (eg. `<a href="/foo.html">`) from `file:` locations.
+  - `dieOnError` (optional) Whether to throw an exception or keep
+  going when any error is encountered. Defaults to false.
+
+  Examples:
+
+  new AssetGraph()
+  // => root: "file:///current/working/dir/"
+
+  new AssetGraph({root: '/absolute/fs/path'});
+  // => root: "file:///absolute/fs/path/"
+
+  new AssetGraph({root: 'relative/path'})
+  // => root: "file:///current/working/dir/relative/path/"
+
+  @constructor AssetGraph
+  @param {Object} options
+  @api public
+  ###
   constructor: (options) ->
-    return new AssetGraph(options) unless this instanceof AssetGraph
-    EventEmitter.call this
     _.extend this, options
     
     # this.root might be undefined, in which case urlTools.urlOrFsPathToUrl will use process.cwd()
     @root = urlTools.urlOrFsPathToUrl(@root, true) # ensureTrailingSlash
-    @_assets = []
-    @_relations = []
-    @_objInBaseAssetPaths = {}
-    @_relationsWithNoBaseAsset = []
-    @idIndex = {}
     @resolverByProtocol =
-      data: AssetGraph.resolvers.data()
-      file: AssetGraph.resolvers.file()
-      javascript: AssetGraph.resolvers.javascript()
-      http: AssetGraph.resolvers.http()
-      https: AssetGraph.resolvers.http()
+      data: @resolvers.data()
+      file: @resolvers.file()
+      javascript: @resolvers.javascript()
+      http: @resolvers.http()
+      https: @resolvers.http()
 
     unless @dieOnError
       @on "error", ->
 
-AssetGraph.typeByExtension = AssetGraph::typeByExtension = {}
-AssetGraph.typeByContentType = AssetGraph::typeByContentType = {}
-AssetGraph.lookupContentType = AssetGraph::lookupContentType = (contentType) ->
-  if contentType
-    
-    # Trim whitespace and semicolon suffixes such as ;charset=...
-    contentType = contentType.match(/^\s*([^;\s]*)(?:;|\s|$)/)[1].toLowerCase() # Will always match
-    if contentType of AssetGraph.typeByContentType
-      AssetGraph.typeByContentType[contentType]
-    else if /\+xml$/i.test(contentType)
-      "Xml"
-    else if /^text\//i.test(contentType)
-      "Text"
+    that = @
+    fs.readdirSync(Path.resolve(__dirname, "transforms")).forEach (fileName) ->
+      that.registerTransform Path.resolve(__dirname, "transforms", fileName)
+
+    fs.readdirSync(Path.resolve(__dirname, "assets")).forEach (fileName) ->
+      if /\.js$/.test(fileName) and fileName isnt "index.js"
+        that.registerAsset require(Path.resolve(__dirname, "assets", fileName))
+
+    fs.readdirSync(Path.resolve(__dirname, "relations")).forEach (fileName) ->
+      if /\.js$/.test(fileName) and fileName isnt "index.js"
+        that.registerRelation Path.resolve(__dirname, "relations", fileName)
+
+  typeByExtension: {}
+
+  typeByContentType: {}
+
+  lookupContentType: (contentType) ->
+    if contentType
+      # Trim whitespace and semicolon suffixes such as ;charset=...
+      contentType = contentType.match(/^\s*([^;\s]*)(?:;|\s|$)/)[1].toLowerCase() # Will always match
+      if contentType of @typeByContentType
+        @typeByContentType[contentType]
+      else if /\+xml$/i.test(contentType)
+        "Xml"
+      else if /^text\//i.test(contentType)
+        "Text"
+      else
+        "Asset"
+
+  createAsset: (assetConfig) ->
+    throw new Error("AssetGraph.create: No type provided in assetConfig" + util.inspect(assetConfig))  unless assetConfig.type
+    if assetConfig.isAsset
+      assetConfig
     else
-      "Asset"
+      new @[assetConfig.type](assetConfig)
 
-AssetGraph.createAsset = AssetGraph::createAsset = (assetConfig) ->
-  throw new Error("AssetGraph.create: No type provided in assetConfig" + util.inspect(assetConfig))  unless assetConfig.type
-  if assetConfig.isAsset
-    assetConfig
-  else
-    new AssetGraph[assetConfig.type](assetConfig)
-
-AssetGraph.query = AssetGraph::query = require("./query")
-AssetGraph.resolvers = require("./resolvers")
-_.extend AssetGraph::,
-  
   ###
   assetGraph.root
   ===============
@@ -306,7 +313,7 @@ _.extend AssetGraph::,
   @api public
   ###
   findAssets: (queryObj) ->
-    AssetGraph.query.queryAssetGraph this, "asset", queryObj
+    @query.queryAssetGraph this, "asset", queryObj
 
   ###
   assetGraph.findRelations([queryObj[, includeUnpopulated]])
@@ -333,7 +340,7 @@ _.extend AssetGraph::,
   @api public
   ###
   findRelations: (queryObj, includeUnpopulated) ->
-    relations = AssetGraph.query.queryAssetGraph(this, "relation", queryObj)
+    relations = @query.queryAssetGraph(this, "relation", queryObj)
     if includeUnpopulated
       relations
     else
@@ -345,14 +352,13 @@ _.extend AssetGraph::,
   =============================================
   
   Recompute the base asset paths for all relations for which the base asset
-  path couldn't be computed due to the graph being incomplete at the time
-  they were added.
+  path couldn't be computed due to the graph being incomplete at the time they
+  were added.
   
-  Usually you shouldn't have to worry about this. This method is
-  only exposed for transforms that do certain manipulations
-  causing to graph to temporarily be in a state where the base
-  asset of some relations couldn't be computed, e.g. if
-  intermediate relations are been removed and attached again.
+  Usually you shouldn't have to worry about this. This method is only exposed
+  for transforms that do certain manipulations causing to graph to temporarily
+  be in a state where the base asset of some relations couldn't be computed,
+  e.g. if intermediate relations are been removed and attached again.
   
   Will throw an error if the base asset for any relation couldn't be found.
   
@@ -384,7 +390,8 @@ _.extend AssetGraph::,
   resolveAssetConfig: (assetConfig, fromUrl, cb) ->
     that = this
     if _.isArray(assetConfig)
-      # Call ourselves recursively for each item, flatten the results and report back
+      # Call ourselves recursively for each item, flatten the results and
+      # report back
       if assetConfig.some(_.isArray)
         throw new Error("AssetGraph.resolveAssetConfig: Multidimensional array not supported.")
       return seq(assetConfig).parMap((_assetConfig) ->
@@ -410,8 +417,9 @@ _.extend AssetGraph::,
         assetConfig = url: encodeURI(assetConfig)
     if assetConfig.isAsset or assetConfig.isResolved
       
-      # Almost done, add .type property if possible (this is all we can do without actually fetching the asset):
-      assetConfig.type = assetConfig.type or (assetConfig.contentType and AssetGraph.lookupContentType(assetConfig.contentType)) or AssetGraph.typeByExtension[Path.extname(assetConfig.url.replace(/[\?\#].*$/, '')).toLowerCase()]
+      # Almost done, add .type property if possible (this is all we can do
+      # without actually fetching the asset):
+      assetConfig.type = assetConfig.type or (assetConfig.contentType and @lookupContentType(assetConfig.contentType)) or @typeByExtension[Path.extname(assetConfig.url.replace(/[\?\#].*$/, '')).toLowerCase()]
       setImmediate ->
         cb null, assetConfig
 
@@ -466,11 +474,11 @@ _.extend AssetGraph::,
       _.extend assetConfig, metadata if metadata
       if metadata and metadata.url
         newExtension = Path.extname(assetConfig.url.replace(/[\?\#].*$/, '')).toLowerCase()
-        return foundType(AssetGraph.typeByExtension[newExtension]) if newExtension of AssetGraph.typeByExtension
+        return foundType(@typeByExtension[newExtension]) if newExtension of @typeByExtension
       if metadata and metadata.contentType
         
         # If the asset was served using HTTP, we shouldn't try to second guess by sniffing.
-        foundType AssetGraph.lookupContentType(metadata.contentType)
+        foundType @lookupContentType(metadata.contentType)
       else if rawSrc.length is 0
         foundType() # Give up
       else
@@ -482,13 +490,14 @@ _.extend AssetGraph::,
         ])
         fileOutput = ''
         
-        # The 'file' utility might close its stdin as soon as it has figured out the content type:
+        # The 'file' utility might close its stdin as soon as it has figured
+        # out the content type:
         fileProcess.stdin.on "error", ->
 
         fileProcess.stdout.on("data", (chunk) ->
           fileOutput += chunk
         ).on "end", ->
-          foundType AssetGraph.lookupContentType(fileOutput.match(/^([^\n]*)/)[1])
+          foundType @lookupContentType(fileOutput.match(/^([^\n]*)/)[1])
 
         fileProcess.stdin.end rawSrc
 
@@ -507,7 +516,7 @@ _.extend AssetGraph::,
 
   _traverse: (startAssetOrRelation, relationQueryObj, preOrderLambda, postOrderLambda) ->
     that = this
-    relationQueryMatcher = relationQueryObj and AssetGraph.query.createValueMatcher(relationQueryObj)
+    relationQueryMatcher = relationQueryObj and @query.createValueMatcher(relationQueryObj)
     startAsset = undefined
     startRelation = undefined
     if startAssetOrRelation.isRelation
@@ -570,6 +579,62 @@ _.extend AssetGraph::,
           done err
     that
 
+  transforms: {}
+
+  registerTransform: (fileNameOrFunction, name) ->
+    if typeof fileNameOrFunction is "function"
+      name = name or fileNameOrFunction.name
+      @transforms[name] = fileNameOrFunction
+    else
+      # File name
+      name = name or Path.basename(fileNameOrFunction, ".js")
+      fileNameOrFunction = Path.resolve(process.cwd(), fileNameOrFunction) # Absolutify if not already absolute
+      @transforms.__defineGetter__ name, ->
+        require fileNameOrFunction
+
+    TransformQueue::[name] = -> # ...
+      @transforms.push @transforms[name].apply(this, arguments)  if not @conditions.length or @conditions[@conditions.length - 1]
+      this
+
+    # Make assetGraph.<transformName>(options) a shorthand for creating a new TransformQueue:
+    @[name] = ->
+      transformQueue = new TransformQueue(this)
+      transformQueue[name].apply transformQueue, arguments
+
+  registerAsset: (Constructor, type) ->
+    type = type or Constructor.name
+    prototype = Constructor::
+    prototype.type = type
+    @[type] = @[type] = Constructor
+    Constructor::["is" + type] = true
+    if prototype.contentType
+      if prototype.contentType of @typeByContentType
+        console.warn "#{type}: Redefinition of Content-Type " + prototype.contentType
+        console.trace()
+      @typeByContentType[prototype.contentType] = type
+    if prototype.supportedExtensions
+      that = @
+      prototype.supportedExtensions.forEach (supportedExtension) ->
+        if supportedExtension of that.typeByExtension
+          console.warn "#{type}: Redefinition of #{supportedExtension} extension"
+          console.trace()
+        that.typeByExtension[supportedExtension] = type
+
+  registerRelation: (fileNameOrConstructor, type) ->
+    if typeof fileNameOrConstructor is "function"
+      type = type or fileNameOrConstructor.name
+      fileNameOrConstructor::type = type
+      @[type] = fileNameOrConstructor
+    else
+      # Assume file name
+      getter = ->
+        Constructor = require(fileNameOrConstructor)
+        Constructor::type = type
+        Constructor
+      fileNameRegex = ((if os.platform() is "win32" then /\\([^\\]+)\.js$/ else /\/([^\/]+)\.js$/))
+      type = type or fileNameOrConstructor.match(fileNameRegex)[1]
+      @__defineGetter__ type, getter
+
 # Add AssetGraph helper methods that implicitly create a new TransformQueue:
 ["if", "queue"].forEach (methodName) ->
   AssetGraph::[methodName] = -> # ...
@@ -578,72 +643,4 @@ _.extend AssetGraph::,
 
 AssetGraph::if_ = AssetGraph::if
 
-AssetGraph.transforms = {}
-AssetGraph.registerTransform = (fileNameOrFunction, name) ->
-  if typeof fileNameOrFunction is "function"
-    name = name or fileNameOrFunction.name
-    AssetGraph.transforms[name] = fileNameOrFunction
-  else
-    # File name
-    name = name or Path.basename(fileNameOrFunction, ".js")
-    fileNameOrFunction = Path.resolve(process.cwd(), fileNameOrFunction) # Absolutify if not already absolute
-    AssetGraph.transforms.__defineGetter__ name, ->
-      require fileNameOrFunction
-
-  TransformQueue::[name] = -> # ...
-    @transforms.push AssetGraph.transforms[name].apply(this, arguments)  if not @conditions.length or @conditions[@conditions.length - 1]
-    this
-
-  # Make assetGraph.<transformName>(options) a shorthand for creating a new TransformQueue:
-  AssetGraph::[name] = ->
-    transformQueue = new TransformQueue(this)
-    transformQueue[name].apply transformQueue, arguments
-
-AssetGraph.registerAsset = (Constructor, type) ->
-  type = type or Constructor.name
-  prototype = Constructor::
-  prototype.type = type
-  AssetGraph[type] = AssetGraph::[type] = Constructor
-  Constructor::["is" + type] = true
-  if prototype.contentType
-    if prototype.contentType of AssetGraph.typeByContentType
-      console.warn "#{type}: Redefinition of Content-Type " + prototype.contentType
-      console.trace()
-    AssetGraph.typeByContentType[prototype.contentType] = type
-  if prototype.supportedExtensions
-    prototype.supportedExtensions.forEach (supportedExtension) ->
-      if supportedExtension of AssetGraph.typeByExtension
-        console.warn "#{type}: Redefinition of " + supportedExtension + " extension"
-        console.trace()
-      AssetGraph.typeByExtension[supportedExtension] = type
-
-AssetGraph.registerRelation = (fileNameOrConstructor, type) ->
-  if typeof fileNameOrConstructor is "function"
-    type = type or fileNameOrConstructor.name
-    fileNameOrConstructor::type = type
-    AssetGraph[type] = AssetGraph::[type] = fileNameOrConstructor
-  else
-    
-    # Assume file name
-    getter = ->
-      Constructor = require(fileNameOrConstructor)
-      Constructor::type = type
-      Constructor
-    fileNameRegex = ((if os.platform() is "win32" then /\\([^\\]+)\.js$/ else /\/([^\/]+)\.js$/))
-    type = type or fileNameOrConstructor.match(fileNameRegex)[1]
-    AssetGraph.__defineGetter__ type, getter
-    AssetGraph::__defineGetter__ type, getter
-
 module.exports = AssetGraph
-
-fs.readdirSync(Path.resolve(__dirname, "transforms")).forEach (fileName) ->
-  AssetGraph.registerTransform Path.resolve(__dirname, "transforms", fileName)
-
-fs.readdirSync(Path.resolve(__dirname, "assets")).forEach (fileName) ->
-  if /\.js$/.test(fileName) and fileName isnt "index.js"
-    AssetGraph.registerAsset require(Path.resolve(__dirname, "assets", fileName))
-
-fs.readdirSync(Path.resolve(__dirname, "relations")).forEach (fileName) ->
-  if /\.js$/.test(fileName) and fileName isnt "index.js"
-    AssetGraph.registerRelation Path.resolve(__dirname, "relations", fileName)
-
