@@ -160,7 +160,7 @@ class Asset extends EventEmitter
   `Json`
   Regular JavaScript object (the result of JSON.parse on the decoded source).
 
-  `CacheManifest`  
+  `CacheManifest`
   A JavaScript object with a key for each section present in the manifest
   (`CACHE`, `NETWORK`, `REMOTE`). The value is an array with an item for each
   entry in the section. Refer to the source for details.
@@ -229,7 +229,8 @@ class Asset extends EventEmitter
       if @isInline
         if @assetGraph
           incomingRelations = @incomingRelations
-          return incomingRelations[0].from.nonInlineAncestor  if incomingRelations.length > 0
+          if incomingRelations.length > 0
+            return incomingRelations[0].from.nonInlineAncestor
         null
       else
         this
@@ -323,7 +324,7 @@ class Asset extends EventEmitter
     set: (rawSrc) ->
       @unload()
       @_updateRawSrcAndLastKnownByteLength rawSrc
-      @populate()  if @assetGraph
+      @populate() if @assetGraph
       @markDirty()
 
   _updateRawSrcAndLastKnownByteLength: (rawSrc) ->
@@ -395,7 +396,7 @@ class Asset extends EventEmitter
       @_url
 
     set: (url) ->
-      throw new Error(@toString() + " cannot set url of non-externalizable asset")  unless @isExternalizable
+      throw new Error("#{@toString()} cannot set url of non-externalizable asset")  unless @isExternalizable
       oldUrl = @_url
       if url and not /^[a-z\+]+:/.test(url)
 
@@ -428,7 +429,8 @@ class Asset extends EventEmitter
         if @assetGraph
 
           # Update the AssetGraph's indices
-          @assetGraph.recomputeBaseAssets()  if @assetGraph._relationsWithNoBaseAsset.length
+          if @assetGraph._relationsWithNoBaseAsset.length
+            @assetGraph.recomputeBaseAssets()
           [].concat(@assetGraph._objInBaseAssetPaths[@id]).forEach ((affectedRelation) ->
             unless oldUrl
 
@@ -503,7 +505,8 @@ class Asset extends EventEmitter
         return @assetGraph.findRelations(
           from: this
         , true)
-      @_outgoingRelations = @findOutgoingRelationsInParseTree()  unless @_outgoingRelations
+      unless @_outgoingRelations
+        @_outgoingRelations = @findOutgoingRelationsInParseTree()
       @_outgoingRelations
 
   findOutgoingRelationsInParseTree: ->
@@ -545,7 +548,8 @@ class Asset extends EventEmitter
         unless outgoingRelation.assetGraph
           if outgoingRelation.to.url or typeof outgoingRelation.to is "string"
 
-            # See if the target asset is already in the graph by looking up its url:
+            # See if the target asset is already in the graph by looking up
+            # its url:
             relativeUrl = outgoingRelation.to.url or outgoingRelation.to
             if /^data:/.test(relativeUrl)
               assetConfig = resolveDataUrl(relativeUrl)
@@ -675,4 +679,5 @@ class Asset extends EventEmitter
   @property 'urlOrDescription',
     get: ->
       @url or ("inline " + @type + ((if @nonInlineAncestor then " in " + @nonInlineAncestor.url else "")))
+
 module.exports = Asset
