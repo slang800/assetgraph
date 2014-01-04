@@ -90,7 +90,7 @@ class Asset extends EventEmitter
       , this)
       delete config.outgoingRelations
     _.extend this, config
-    @id = "" + _.uniqueId()
+    @id = '' + _.uniqueId()
 
   ###
   asset.isAsset
@@ -135,7 +135,7 @@ class Asset extends EventEmitter
   ###
   @property 'defaultExtension',
     get: ->
-      (@supportedExtensions and @supportedExtensions[0]) or ""
+      (@supportedExtensions and @supportedExtensions[0]) or ''
 
   ###
   asset.parseTree (getter)
@@ -314,7 +314,7 @@ class Asset extends EventEmitter
   @property 'rawSrc',
     get: ->
       unless @_rawSrc
-        err = new Error("Asset.rawSrc getter: Asset isn't loaded: " + this)
+        err = new Error("Asset.rawSrc getter: Asset isn't loaded: #{@}")
         if @assetGraph
           @assetGraph.emit "error", err
         else
@@ -356,7 +356,8 @@ class Asset extends EventEmitter
         @assetGraph.removeRelation outgoingRelation
 
         # Remove inline asset
-        @assetGraph.removeAsset outgoingRelation.to  if outgoingRelation.to.isAsset and outgoingRelation.to.isInline
+        if outgoingRelation.to.isAsset and outgoingRelation.to.isInline
+          @assetGraph.removeAsset outgoingRelation.to
       ), this
     delete @isPopulated
 
@@ -396,7 +397,8 @@ class Asset extends EventEmitter
       @_url
 
     set: (url) ->
-      throw new Error("#{@toString()} cannot set url of non-externalizable asset")  unless @isExternalizable
+      unless @isExternalizable
+        throw new Error("#{@toString()} cannot set url of non-externalizable asset")
       oldUrl = @_url
       if url and not /^[a-z\+]+:/.test(url)
 
@@ -419,7 +421,7 @@ class Asset extends EventEmitter
             # Relative
             url = urlTools.resolveUrl(baseUrl, url)
         else
-          throw new Error("Cannot find base url for resolving new url of " + @urlOrDescription + " to non-absolute: " + url)
+          throw new Error("Cannot find base url for resolving new url of #{@urlOrDescription} to non-absolute: #{url}")
       if url isnt oldUrl
         @_url = url
         if url and not urlEndsWithSlashRegExp.test(url)
@@ -481,8 +483,8 @@ class Asset extends EventEmitter
 
       # Cascade dirtiness to containing asset and re-inline
       if @incomingRelations.length > 1
-        throw new Error("Asset.markDirty assertion error: Expected a maximum of one incoming relation to inline asset, but found " + @incomingRelations.length)
-      else @incomingRelations[0].inline()  if @incomingRelations.length is 1
+        throw new Error("Asset.markDirty assertion error: Expected a maximum of one incoming relation to inline asset, but found #{@incomingRelations.length}")
+      else @incomingRelations[0].inline() if @incomingRelations.length is 1
     this
 
   ###
@@ -524,7 +526,8 @@ class Asset extends EventEmitter
   ###
   @property 'incomingRelations',
     get: ->
-      throw new Error("Asset.incomingRelations getter: Asset is not part of an AssetGraph")  unless @assetGraph
+      unless @assetGraph
+        throw new Error("Asset.incomingRelations getter: Asset is not part of an AssetGraph")
       @assetGraph.findRelations to: this
 
   ###
@@ -542,7 +545,8 @@ class Asset extends EventEmitter
   @api public
   ###
   populate: ->
-    throw new Error("Asset.populateRelationsToExistingAssets: Asset is not part of an AssetGraph")  unless @assetGraph
+    unless @assetGraph
+      throw new Error("Asset.populateRelationsToExistingAssets: Asset is not part of an AssetGraph")
     if @isLoaded and not @keepUnpopulated and not @isPopulated
       @outgoingRelations.forEach ((outgoingRelation) ->
         unless outgoingRelation.assetGraph
@@ -566,13 +570,15 @@ class Asset extends EventEmitter
 
                 # If multiple assets share the url, prefer the one that was
                 # added last (should be customizable?):
-                outgoingRelation.to = targetAssets[targetAssets.length - 1]  if targetAssets.length
+                if targetAssets.length
+                  outgoingRelation.to = targetAssets[targetAssets.length - 1]
             @assetGraph.addRelation outgoingRelation
           else
 
             # Inline asset
             @assetGraph.addRelation outgoingRelation
-            @assetGraph.addAsset outgoingRelation.to  unless outgoingRelation.to.assetGraph
+            unless outgoingRelation.to.assetGraph
+              @assetGraph.addAsset outgoingRelation.to
       ), this
       @isPopulated = true
 
@@ -622,7 +628,8 @@ class Asset extends EventEmitter
   @api public
   ###
   clone: (incomingRelations, preserveUrl) ->
-    throw new Error("asset.clone(): incomingRelations not supported because asset isn't in a graph")  if incomingRelations and not @assetGraph
+    if incomingRelations and not @assetGraph
+      throw new Error("asset.clone(): incomingRelations not supported because asset isn't in a graph")
 
     # TODO: Clone more metadata
     constructorOptions =
@@ -630,28 +637,30 @@ class Asset extends EventEmitter
       extension: @extension
       lastKnownByteLength: @lastKnownByteLength
 
-    constructorOptions.url = @url  if preserveUrl and not @isInline
+    constructorOptions.url = @url if preserveUrl and not @isInline
     if @isText
-
       # Cheaper than encoding + decoding
       constructorOptions.text = @text
     else
       constructorOptions.rawSrc = @rawSrc
 
     # FIXME: Belongs in the subclass
-    constructorOptions._isFragment = @_isFragment  if typeof @_isFragment isnt "undefined"
+    if typeof @_isFragment isnt "undefined"
+      constructorOptions._isFragment = @_isFragment
     if @type is "JavaScript"
-
       # FIXME: Belongs in the subclass
-      constructorOptions.initialComments = @initialComments  if @initialComments
-      constructorOptions.quoteChar = @quoteChar  if @quoteChar
+      if @initialComments
+        constructorOptions.initialComments = @initialComments
+      constructorOptions.quoteChar = @quoteChar if @quoteChar
     clone = new @constructor(constructorOptions)
-    clone.url = urlTools.resolveUrl(@url, clone.id + @extension)  if not preserveUrl and not @isInline
+    if not preserveUrl and not @isInline
+      clone.url = urlTools.resolveUrl(@url, clone.id + @extension)
     if @assetGraph
       if incomingRelations
-        incomingRelations = [incomingRelations]  if incomingRelations.isRelation
+        incomingRelations = [incomingRelations] if incomingRelations.isRelation
         incomingRelations.forEach ((incomingRelation) ->
-          throw new Error("asset.clone(): Incoming relation is not a relation: ", incomingRelation)  if not incomingRelation or not incomingRelation.isRelation
+          if not incomingRelation or not incomingRelation.isRelation
+            throw new Error("asset.clone(): Incoming relation is not a relation: ", incomingRelation)
           if incomingRelation.id of @assetGraph.idIndex
             incomingRelation.to = clone
           else
@@ -674,10 +683,10 @@ class Asset extends EventEmitter
   @api public
   ###
   toString: ->
-    "[" + @type + "/" + @id + ((if @url then " " + @url else "")) + "]"
+    "[#{@type}/#{@id}" + "#{if @url then " #{@url}" else ''}]"
 
   @property 'urlOrDescription',
     get: ->
-      @url or ("inline " + @type + ((if @nonInlineAncestor then " in " + @nonInlineAncestor.url else "")))
+      @url or ("inline #{@type}#{if @nonInlineAncestor then " in " + @nonInlineAncestor.url else ''}")
 
 module.exports = Asset

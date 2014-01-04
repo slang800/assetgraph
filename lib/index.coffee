@@ -25,14 +25,13 @@ Create a new AssetGraph instance.
 
 Options:
 
-- `root` (optional) The root URL of the graph, either as a fully
-qualified `file:` or `http:` url or file system
-path. Defaults to the current directory,
-ie. `file://<process.cwd()>/`. The purpose of the root
-option is to allow resolution of root-relative urls
-(eg. `<a href="/foo.html">`) from `file:` locations.
-- `dieOnError` (optional) Whether to throw an exception or keep
-going when any error is encountered. Defaults to false.
+- `root` (optional) The root URL of the graph, either as a fully qualified
+  `file:` or `http:` url or file system path. Defaults to the current
+  directory, ie. `file://<process.cwd()>/`. The purpose of the root option is
+  to allow resolution of root-relative urls (eg. `<a href="/foo.html">`) from
+  `file:` locations.
+- `dieOnError` (optional) Whether to throw an exception or keep going when any
+  error is encountered. Defaults to false.
 
 Examples:
 
@@ -229,10 +228,10 @@ _.extend AssetGraph::,
     else if position is "before" or position is "after" # Assume 'before' or 'after'
       throw new Error("AssetGraph.addRelation: Adjacent relation is not a relation: " + adjacentRelation)  if not adjacentRelation or not adjacentRelation.isRelation
       i = @_relations.indexOf(adjacentRelation) + ((if position is "after" then 1 else 0))
-      throw new Error("AssetGraph.addRelation: Adjacent relation is not in the graph: " + adjacentRelation)  if i is -1
+      throw new Error("AssetGraph.addRelation: Adjacent relation is not in the graph: #{adjacentRelation}")  if i is -1
       @_relations.splice i, 0, relation
     else
-      throw new Error("AssetGraph.addRelation: Illegal 'position' argument: " + position)
+      throw new Error("AssetGraph.addRelation: Illegal 'position' argument: #{position}")
     @idIndex[relation.id] = relation
     @_objInBaseAssetPaths[relation.id] = []
     relation._registerBaseAssetPath()
@@ -251,8 +250,10 @@ _.extend AssetGraph::,
   @api public
   ###
   removeRelation: (relation) ->
-    throw new Error("AssetGraph.removeRelation: Not a relation: " + relation)  if not relation or not relation.isRelation
-    throw new Error("AssetGraph.removeRelation: " + relation + " not in graph")  unless relation.id of @idIndex
+    if not relation or not relation.isRelation
+      throw new Error("AssetGraph.removeRelation: Not a relation: #{relation}")
+    unless relation.id of @idIndex
+      throw new Error("AssetGraph.removeRelation: #{relation} not in graph")
     affectedRelations = [].concat(@_objInBaseAssetPaths[relation.id])
     affectedRelations.forEach ((affectedRelation) ->
       affectedRelation._unregisterBaseAssetPath()
@@ -262,7 +263,7 @@ _.extend AssetGraph::,
 
     relationIndex = @_relations.indexOf(relation)
     if relationIndex is -1
-      throw new Error("removeRelation: " + relation + " not in graph")
+      throw new Error("removeRelation: #{relation} not in graph")
     else
       @_relations.splice relationIndex, 1
     delete @_objInBaseAssetPaths[relation.id]
@@ -429,14 +430,14 @@ _.extend AssetGraph::,
               that.resolveAssetConfig resolvedAssetConfig, fromUrl, cb
         else
           setImmediate ->
-            that.emit "warn", new Error("AssetGraph.resolveAssetConfig: No resolver found for protocol: " + protocol)
+            that.emit "warn", new Error("AssetGraph.resolveAssetConfig: No resolver found for protocol: #{protocol}")
             cb null, []
       else
         assetConfig.url = that.resolveUrl(fromUrl, assetConfig.url)
         that.resolveAssetConfig assetConfig, fromUrl, cb
     else
       setImmediate ->
-        that.emit "error", new Error("AssetGraph.resolveAssetConfig: Cannot resolve asset config (no url): " + util.inspect(assetConfig))
+        that.emit "error", new Error("AssetGraph.resolveAssetConfig: Cannot resolve asset config (no url): #{util.inspect(assetConfig)}")
         cb null, []
 
   # Resolve a url while taking the root of the AssetGraph instance into account
@@ -564,7 +565,7 @@ _.extend AssetGraph::,
       callbackCalled = false
       transform that, (err) ->
         if callbackCalled
-          console.warn "AssetGraph._runTransform: The transform " + transform.name + " called the callback more than once!"
+          console.warn "AssetGraph._runTransform: The transform #{transform.name} called the callback more than once!"
         else
           callbackCalled = true
           done err
@@ -607,13 +608,13 @@ AssetGraph.registerAsset = (Constructor, type) ->
   Constructor::["is" + type] = true
   if prototype.contentType
     if prototype.contentType of AssetGraph.typeByContentType
-      console.warn "#{type}: Redefinition of Content-Type " + prototype.contentType
+      console.warn "#{type}: Redefinition of Content-Type #{prototype.contentType}"
       console.trace()
     AssetGraph.typeByContentType[prototype.contentType] = type
   if prototype.supportedExtensions
     prototype.supportedExtensions.forEach (supportedExtension) ->
       if supportedExtension of AssetGraph.typeByExtension
-        console.warn "#{type}: Redefinition of " + supportedExtension + " extension"
+        console.warn "#{type}: Redefinition of #{supportedExtension} extension"
         console.trace()
       AssetGraph.typeByExtension[supportedExtension] = type
 
