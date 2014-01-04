@@ -623,13 +623,12 @@ AssetGraph.registerRelation = (fileNameOrConstructor, type) ->
     fileNameOrConstructor::type = type
     AssetGraph[type] = AssetGraph::[type] = fileNameOrConstructor
   else
-    
     # Assume file name
     getter = ->
       Constructor = require(fileNameOrConstructor)
       Constructor::type = type
       Constructor
-    fileNameRegex = ((if os.platform() is "win32" then /\\([^\\]+)\.js$/ else /\/([^\/]+)\.js$/))
+    fileNameRegex = ((if os.platform() is "win32" then /\\([^\\]+)\.(js|coffee)$/ else /\/([^\/]+)\.(js|coffee)$/))
     type = type or fileNameOrConstructor.match(fileNameRegex)[1]
     AssetGraph.__defineGetter__ type, getter
     AssetGraph::__defineGetter__ type, getter
@@ -640,10 +639,10 @@ fs.readdirSync(Path.resolve(__dirname, "transforms")).forEach (fileName) ->
   AssetGraph.registerTransform Path.resolve(__dirname, "transforms", fileName)
 
 fs.readdirSync(Path.resolve(__dirname, "assets")).forEach (fileName) ->
-  if /\.js$/.test(fileName) and fileName isnt "index.js"
+  if /\.(js|coffee)$/.test(fileName) and fileName not in ["index.js", "index.coffee"]
     AssetGraph.registerAsset require(Path.resolve(__dirname, "assets", fileName))
 
 fs.readdirSync(Path.resolve(__dirname, "relations")).forEach (fileName) ->
-  if /\.js$/.test(fileName) and fileName isnt "index.js"
+  if /\.(js|coffee)$/.test(fileName) and fileName not in ["index.js", "index.coffee"]
     AssetGraph.registerRelation Path.resolve(__dirname, "relations", fileName)
 
