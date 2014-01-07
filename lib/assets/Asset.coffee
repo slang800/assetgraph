@@ -1,13 +1,13 @@
-path = require("path")
-EventEmitter = require("events").EventEmitter
-util = require("util")
-crypto = require("crypto")
-_ = require("underscore")
-urlTools = require("url-tools")
-resolveDataUrl = require("../util/resolveDataUrl")
-extendWithGettersAndSetters = require("../util/extendWithGettersAndSetters")
-passError = require("passerror")
-setImmediate = process.nextTick if typeof setImmediate is "undefined"
+path = require 'path'
+EventEmitter = require('events').EventEmitter
+util = require 'util'
+crypto = require 'crypto'
+_ = require 'underscore'
+urlTools = require 'url-tools'
+resolveDataUrl = require '../util/resolveDataUrl'
+extendWithGettersAndSetters = require '../util/extendWithGettersAndSetters'
+passError = require 'passerror'
+setImmediate = process.nextTick if typeof setImmediate is 'undefined'
 
 urlEndsWithSlashRegExp = /\/(?:[?#].*)?$/
 
@@ -59,7 +59,7 @@ class Asset extends EventEmitter
   Takes precedence over the `extension` config option.
   ###
   constructor: (config) ->
-    if "lastKnownByteLength" of config
+    if 'lastKnownByteLength' of config
       @_lastKnownByteLength = config.lastKnownByteLength
       delete config.lastKnownByteLength
     if config.rawSrc
@@ -76,12 +76,12 @@ class Asset extends EventEmitter
         @_fileName = path.basename(pathname)
       delete config.url
     else
-      if "fileName" of config and ("_fileName" not of this)
+      if 'fileName' of config and ('_fileName' not of this)
         @_fileName = config.fileName
         @_extension = path.extname(@_fileName)
       delete config._fileName
 
-      @_extension = config.extension  if "extension" of config and ("_extension" not of this)
+      @_extension = config.extension  if 'extension' of config and ('_extension' not of this)
       delete config.extension
     if config.outgoingRelations
       @_outgoingRelations = config.outgoingRelations.map((outgoingRelation) ->
@@ -123,7 +123,7 @@ class Asset extends EventEmitter
 
   @api public
   ###
-  contentType: "application/octet-stream"
+  contentType: 'application/octet-stream'
 
   ###
   asset.defaultExtension (getter)
@@ -198,7 +198,7 @@ class Asset extends EventEmitter
           _.extend that, metadata # Might change url, contentType and encoding, and could add etag, lastModified, and date
         delete that.rawSrcProxy
 
-        that.emit "load", that
+        that.emit 'load', that
         if that.assetGraph
 
           # Make sure that parse errors and the like are passed to cb:
@@ -210,11 +210,11 @@ class Asset extends EventEmitter
       )
     else
       setImmediate ->
-        cb new Error("Asset.load: No rawSrc or rawSrcProxy found, cannot load")
+        cb new Error('Asset.load: No rawSrc or rawSrcProxy found, cannot load')
 
   @property 'isLoaded',
     get: ->
-      "_rawSrc" of this or "_parseTree" of this or (@isText and "_text" of this)
+      '_rawSrc' of this or '_parseTree' of this or (@isText and '_text' of this)
 
   ###
   asset.nonInlineAncestor (getter)
@@ -253,16 +253,16 @@ class Asset extends EventEmitter
   ###
   @property 'extension',
     get: ->
-      if "_extension" of this
+      if '_extension' of this
         @_extension
       else
         @defaultExtension
 
     set: (extension) ->
       unless @isInline
-        @url = @url.replace(/(?:\.\w+)?([?#]|$)/, extension + "$1")
-      else if "_fileName" of this
-        if "_extension" of this
+        @url = @url.replace(/(?:\.\w+)?([?#]|$)/, "#{extension}$1")
+      else if '_fileName' of this
+        if '_extension' of this
           @_fileName = path.basename(@_fileName, @_extension) + extension
         else
           @_fileName += extension
@@ -284,10 +284,11 @@ class Asset extends EventEmitter
   ###
   @property 'fileName',
     get: ->
-      @_fileName  if "_fileName" of this
+      @_fileName  if '_fileName' of this
 
     set: (fileName) ->
-      @url = @url.replace(/[^\/?#]*([?#]|$)/, fileName + "$1")  unless @isInline
+      unless @isInline
+        @url = @url.replace(/[^\/?#]*([?#]|$)/, "#{fileName}$1")
       @_extension = path.extname(fileName)
       @_fileName = fileName
 
@@ -316,7 +317,7 @@ class Asset extends EventEmitter
       unless @_rawSrc
         err = new Error("Asset.rawSrc getter: Asset isn't loaded: #{@}")
         if @assetGraph
-          @assetGraph.emit "error", err
+          @assetGraph.emit 'error', err
         else
           throw err
       @_rawSrc
@@ -337,7 +338,7 @@ class Asset extends EventEmitter
     get: ->
       if @_rawSrc
         @_rawSrc.length
-      else if "_lastKnownByteLength" of this
+      else if '_lastKnownByteLength' of this
         @_lastKnownByteLength
       else
         @rawSrc.length # Force the rawSrc to be computed
@@ -476,7 +477,7 @@ class Asset extends EventEmitter
   ###
   markDirty: ->
     @isDirty = true
-    delete @_rawSrc  if "_text" of this or "_parseTree" of this
+    delete @_rawSrc  if '_text' of this or '_parseTree' of this
     delete @_md5Hex
 
     if @isInline and @assetGraph

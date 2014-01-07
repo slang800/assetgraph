@@ -1,16 +1,16 @@
-util = require("util")
-fs = require("fs")
-os = require("os")
-childProcess = require("child_process")
-_ = require("underscore")
-EventEmitter = require("events").EventEmitter
-seq = require("seq")
-Path = require("path")
-passError = require("passerror")
-urlTools = require("url-tools")
-TransformQueue = require("./TransformQueue")
+util = require 'util'
+fs = require 'fs'
+os = require 'os'
+childProcess = require 'child_process'
+_ = require 'underscore'
+EventEmitter = require('events').EventEmitter
+seq = require 'seq'
+Path = require 'path'
+passError = require 'passerror'
+urlTools = require 'url-tools'
+TransformQueue = require './TransformQueue'
 
-setImmediate = process.nextTick if typeof setImmediate is "undefined"
+setImmediate = process.nextTick if typeof setImmediate is 'undefined'
 
 ###
 @class AssetGraph
@@ -88,14 +88,14 @@ AssetGraph.lookupContentType = AssetGraph::lookupContentType = (contentType) ->
       "Asset"
 
 AssetGraph.createAsset = AssetGraph::createAsset = (assetConfig) ->
-  throw new Error("AssetGraph.create: No type provided in assetConfig" + util.inspect(assetConfig))  unless assetConfig.type
+  throw new Error("AssetGraph.create: No type provided in assetConfig#{util.inspect(assetConfig)}")  unless assetConfig.type
   if assetConfig.isAsset
     assetConfig
   else
     new AssetGraph[assetConfig.type](assetConfig)
 
-AssetGraph.query = AssetGraph::query = require("./query")
-AssetGraph.resolvers = require("./resolvers")
+AssetGraph.query = AssetGraph::query = require('./query')
+AssetGraph.resolvers = require('./resolvers')
 _.extend AssetGraph::,
   
   ###
@@ -128,15 +128,17 @@ _.extend AssetGraph::,
         @addAsset _asset
       ), this
       return
-    throw new Error("AssetGraph.addAsset: #{asset} is not an asset or an asset config object")  if not asset or typeof asset isnt "object"
+    if not asset or typeof asset isnt "object"
+      throw new Error("AssetGraph.addAsset: #{asset} is not an asset or an asset config object")
     asset = @createAsset(asset)  unless asset.isAsset
-    throw new Error("AssetGraph.addAsset: #{asset} is already in graph (id already in idIndex)")  if asset.id of @idIndex
+    if asset.id of @idIndex
+      throw new Error("AssetGraph.addAsset: #{asset} is already in graph (id already in idIndex)")
     @idIndex[asset.id] = asset
     @_assets.push asset
     @_objInBaseAssetPaths[asset.id] = []
     asset.assetGraph = this
     asset.isPopulated = false
-    @emit "addAsset", asset
+    @emit 'addAsset', asset
     asset.populate()
     this
 
@@ -188,7 +190,7 @@ _.extend AssetGraph::,
     ), this
     delete asset.assetGraph
 
-    @emit "removeAsset", asset
+    @emit 'removeAsset', asset
     this
 
   ###
@@ -204,7 +206,8 @@ _.extend AssetGraph::,
   
   @param {Relation} relation The relation to add to the graph.
   @param {String} position "first", "last", "before", or "after".
-  @param {Relation} adjacentRelation The adjacent relation, mandatory if position is "before" or "after".
+  @param {Relation} adjacentRelation The adjacent relation, mandatory if
+      position is "before" or "after".
   @return {AssetGraph} The AssetGraph instance (chaining-friendly).
   @api private
   ###
@@ -214,19 +217,24 @@ _.extend AssetGraph::,
         @addRelation _relation, position, adjacentRelation
       ), this
       return
-    throw new Error("AssetGraph.addRelation: Not a relation: " + relation)  if not relation or not relation.id or not relation.isRelation
-    throw new Error("AssetGraph.addRelation: Relation already in graph: " + relation)  if relation.id of @idIndex
-    throw new Error("AssetGraph.addRelation: 'from' property of relation is not an asset: " + relation.from)  if not relation.from or not relation.from.isAsset
-    throw new Error("AssetGraph.addRelation: 'from' property of relation is not in the graph: " + relation.from)  unless relation.from.id of @idIndex
-    throw new Error("AssetGraph.addRelation: 'to' property of relation is missing")  unless relation.to
-    position = position or "last"
+    if not relation or not relation.id or not relation.isRelation
+      throw new Error("AssetGraph.addRelation: Not a relation: #{relation}")
+    if relation.id of @idIndex
+      throw new Error("AssetGraph.addRelation: Relation already in graph: #{relation}")
+    if not relation.from or not relation.from.isAsset
+      throw new Error("AssetGraph.addRelation: 'from' property of relation is not an asset: #{relation.from}")
+    unless relation.from.id of @idIndex
+      throw new Error("AssetGraph.addRelation: 'from' property of relation is not in the graph: #{relation.from}")
+    unless relation.to
+      throw new Error("AssetGraph.addRelation: 'to' property of relation is missing")
+    position = position or 'last'
     relation.assetGraph = this
-    if position is "last"
+    if position is 'last'
       @_relations.push relation
-    else if position is "first"
+    else if position is 'first'
       @_relations.unshift relation
-    else if position is "before" or position is "after" # Assume 'before' or 'after'
-      throw new Error("AssetGraph.addRelation: Adjacent relation is not a relation: " + adjacentRelation)  if not adjacentRelation or not adjacentRelation.isRelation
+    else if position is 'before' or position is 'after' # Assume 'before' or 'after'
+      throw new Error("AssetGraph.addRelation: Adjacent relation is not a relation: #{adjacentRelation}")  if not adjacentRelation or not adjacentRelation.isRelation
       i = @_relations.indexOf(adjacentRelation) + ((if position is "after" then 1 else 0))
       throw new Error("AssetGraph.addRelation: Adjacent relation is not in the graph: #{adjacentRelation}")  if i is -1
       @_relations.splice i, 0, relation
@@ -273,7 +281,7 @@ _.extend AssetGraph::,
     ), this
     delete relation.assetGraph
 
-    @emit "removeRelation", relation
+    @emit 'removeRelation', relation
     this
 
   ###
@@ -307,7 +315,7 @@ _.extend AssetGraph::,
   @api public
   ###
   findAssets: (queryObj) ->
-    AssetGraph.query.queryAssetGraph this, "asset", queryObj
+    AssetGraph.query.queryAssetGraph this, 'asset', queryObj
 
   ###
   assetGraph.findRelations([queryObj[, includeUnpopulated]])
@@ -334,7 +342,7 @@ _.extend AssetGraph::,
   @api public
   ###
   findRelations: (queryObj, includeUnpopulated) ->
-    relations = AssetGraph.query.queryAssetGraph(this, "relation", queryObj)
+    relations = AssetGraph.query.queryAssetGraph(this, 'relation', queryObj)
     if includeUnpopulated
       relations
     else
@@ -387,20 +395,20 @@ _.extend AssetGraph::,
     if _.isArray(assetConfig)
       # Call ourselves recursively for each item, flatten the results and report back
       if assetConfig.some(_.isArray)
-        throw new Error("AssetGraph.resolveAssetConfig: Multidimensional array not supported.")
+        throw new Error('AssetGraph.resolveAssetConfig: Multidimensional array not supported.')
       return seq(assetConfig).parMap((_assetConfig) ->
         callback = this
         that.resolveAssetConfig _assetConfig, fromUrl, (err, _resolvedAssetConfigs) ->
           if err
-            that.emit "error", err
+            that.emit 'error', err
             callback null, []
           else
             callback null, _resolvedAssetConfigs
 
       ).unflatten().seq((resolvedAssetConfigs) ->
         cb null, _.flatten(resolvedAssetConfigs)
-      )["catch"](cb)
-    if typeof assetConfig is "string"
+      )['catch'](cb)
+    if typeof assetConfig is 'string'
       if /^[\w\+]+:/.test(assetConfig)
         
         # Includes protocol, assume url
@@ -423,7 +431,7 @@ _.extend AssetGraph::,
         if resolver
           resolver assetConfig, fromUrl, (err, resolvedAssetConfig) ->
             if err
-              that.emit "error", err
+              that.emit 'error', err
               cb null, []
             else
               # Keep reresolving until the .isResolved property shows up:
@@ -457,11 +465,11 @@ _.extend AssetGraph::,
     assetConfig.rawSrcProxy (err, rawSrc, metadata) ->
       foundType = (type) ->
         that.emit "error", new Error("AssetGraph.ensureAssetConfigHasType: Couldn't determine asset type from asset config: #{util.inspect(assetConfig)}, assuming AssetGraph.Asset") unless type
-        assetConfig.type = type or "Asset"
+        assetConfig.type = type or 'Asset'
         cb()
       if err
-        that.emit "warn", new Error("AssetGraph.ensureAssetConfigHasType: Couldn't load #{(assetConfig.url or util.inspect(assetConfig))}, assuming AssetGraph.Asset")
-        assetConfig.type = "Asset"
+        that.emit 'warn', new Error("AssetGraph.ensureAssetConfigHasType: Couldn't load #{(assetConfig.url or util.inspect(assetConfig))}, assuming AssetGraph.Asset")
+        assetConfig.type = 'Asset'
         return cb()
       assetConfig.rawSrc = rawSrc
       _.extend assetConfig, metadata if metadata
@@ -476,19 +484,19 @@ _.extend AssetGraph::,
         foundType() # Give up
       else
         # Work the magic
-        fileProcess = childProcess.spawn("file", [
-          "-b"
-          "--mime-type"
-          "-"
+        fileProcess = childProcess.spawn('file', [
+          '-b'
+          '--mime-type'
+          '-'
         ])
         fileOutput = ''
         
         # The 'file' utility might close its stdin as soon as it has figured out the content type:
-        fileProcess.stdin.on "error", ->
+        fileProcess.stdin.on 'error', ->
 
-        fileProcess.stdout.on("data", (chunk) ->
+        fileProcess.stdout.on('data', (chunk) ->
           fileOutput += chunk
-        ).on "end", ->
+        ).on 'end', ->
           foundType AssetGraph.lookupContentType(fileOutput.match(/^([^\n]*)/)[1])
 
         fileProcess.stdin.end rawSrc
@@ -550,10 +558,10 @@ _.extend AssetGraph::,
     that = this
     startTime = new Date()
     done = passError(cb, ->
-      that.emit "afterTransform", transform, new Date().getTime() - startTime
+      that.emit 'afterTransform', transform, new Date().getTime() - startTime
       cb null, that
     )
-    that.emit "beforeTransform", transform
+    that.emit 'beforeTransform', transform
     if transform.length < 2
       setImmediate ->
         try
@@ -572,7 +580,7 @@ _.extend AssetGraph::,
     that
 
 # Add AssetGraph helper methods that implicitly create a new TransformQueue:
-["if", "queue"].forEach (methodName) ->
+['if', 'queue'].forEach (methodName) ->
   AssetGraph::[methodName] = -> # ...
     transformQueue = new TransformQueue(this)
     transformQueue[methodName].apply transformQueue, arguments
@@ -581,18 +589,19 @@ AssetGraph::if_ = AssetGraph::if
 
 AssetGraph.transforms = {}
 AssetGraph.registerTransform = (fileNameOrFunction, name) ->
-  if typeof fileNameOrFunction is "function"
+  if typeof fileNameOrFunction is 'function'
     name = name or fileNameOrFunction.name
     AssetGraph.transforms[name] = fileNameOrFunction
   else
     # File name
-    name = name or Path.basename(fileNameOrFunction, ".js")
+    name = name or Path.basename(fileNameOrFunction, '.js')
     fileNameOrFunction = Path.resolve(process.cwd(), fileNameOrFunction) # Absolutify if not already absolute
     AssetGraph.transforms.__defineGetter__ name, ->
       require fileNameOrFunction
 
-  TransformQueue::[name] = -> # ...
-    @transforms.push AssetGraph.transforms[name].apply(this, arguments)  if not @conditions.length or @conditions[@conditions.length - 1]
+  TransformQueue::[name] = ->
+    if not @conditions.length or @conditions[@conditions.length - 1]
+      @transforms.push AssetGraph.transforms[name].apply(this, arguments)
     this
 
   # Make assetGraph.<transformName>(options) a shorthand for creating a new TransformQueue:
@@ -605,7 +614,7 @@ AssetGraph.registerAsset = (Constructor, type) ->
   prototype = Constructor::
   prototype.type = type
   AssetGraph[type] = AssetGraph::[type] = Constructor
-  Constructor::["is" + type] = true
+  Constructor::['is' + type] = true
   if prototype.contentType
     if prototype.contentType of AssetGraph.typeByContentType
       console.warn "#{type}: Redefinition of Content-Type #{prototype.contentType}"
@@ -619,7 +628,7 @@ AssetGraph.registerAsset = (Constructor, type) ->
       AssetGraph.typeByExtension[supportedExtension] = type
 
 AssetGraph.registerRelation = (fileNameOrConstructor, type) ->
-  if typeof fileNameOrConstructor is "function"
+  if typeof fileNameOrConstructor is 'function'
     type = type or fileNameOrConstructor.name
     fileNameOrConstructor::type = type
     AssetGraph[type] = AssetGraph::[type] = fileNameOrConstructor
@@ -629,21 +638,21 @@ AssetGraph.registerRelation = (fileNameOrConstructor, type) ->
       Constructor = require(fileNameOrConstructor)
       Constructor::type = type
       Constructor
-    fileNameRegex = ((if os.platform() is "win32" then /\\([^\\]+)\.(js|coffee)$/ else /\/([^\/]+)\.(js|coffee)$/))
+    fileNameRegex = ((if os.platform() is 'win32' then /\\([^\\]+)\.(js|coffee)$/ else /\/([^\/]+)\.(js|coffee)$/))
     type = type or fileNameOrConstructor.match(fileNameRegex)[1]
     AssetGraph.__defineGetter__ type, getter
     AssetGraph::__defineGetter__ type, getter
 
 module.exports = AssetGraph
 
-fs.readdirSync(Path.resolve(__dirname, "transforms")).forEach (fileName) ->
-  AssetGraph.registerTransform Path.resolve(__dirname, "transforms", fileName)
+fs.readdirSync(Path.resolve(__dirname, 'transforms')).forEach (fileName) ->
+  AssetGraph.registerTransform Path.resolve(__dirname, 'transforms', fileName)
 
-fs.readdirSync(Path.resolve(__dirname, "assets")).forEach (fileName) ->
-  if /\.(js|coffee)$/.test(fileName) and fileName not in ["index.js", "index.coffee"]
-    AssetGraph.registerAsset require(Path.resolve(__dirname, "assets", fileName))
+fs.readdirSync(Path.resolve(__dirname, 'assets')).forEach (fileName) ->
+  if /\.(js|coffee)$/.test(fileName) and fileName not in ['index.js', 'index.coffee']
+    AssetGraph.registerAsset require(Path.resolve(__dirname, 'assets', fileName))
 
-fs.readdirSync(Path.resolve(__dirname, "relations")).forEach (fileName) ->
-  if /\.(js|coffee)$/.test(fileName) and fileName not in ["index.js", "index.coffee"]
-    AssetGraph.registerRelation Path.resolve(__dirname, "relations", fileName)
+fs.readdirSync(Path.resolve(__dirname, 'relations')).forEach (fileName) ->
+  if /\.(js|coffee)$/.test(fileName) and fileName not in ['index.js', 'index.coffee']
+    AssetGraph.registerRelation Path.resolve(__dirname, 'relations', fileName)
 
