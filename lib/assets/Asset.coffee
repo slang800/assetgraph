@@ -1,11 +1,9 @@
 path = require 'path'
 EventEmitter = require('events').EventEmitter
-util = require 'util'
 crypto = require 'crypto'
 _ = require 'underscore'
 urlTools = require 'url-tools'
 resolveDataUrl = require '../util/resolveDataUrl'
-extendWithGettersAndSetters = require '../util/extendWithGettersAndSetters'
 passError = require 'passerror'
 setImmediate = process.nextTick if typeof setImmediate is 'undefined'
 
@@ -19,44 +17,34 @@ Function::property = (prop, desc) ->
    and manipulated on its own outside the graph context.
 ###
 class Asset extends EventEmitter
-  ###
-  new Asset(options)
-  ==================
-
-  Create a new Asset instance.
-
-  Most of the time it's unnecessary to create asset objects directly. When you
-  need to manipulate assets that already exist on disc or on a web server, the
-  `loadAssets` and `populate` transforms are the easiest way to get the
-  objects created. See the section about transforms below.
-
-  Note that the Asset base class is only intended to be used to represent
-  assets for which there's no specific subclass.
-
-  Options:
-
-  - `rawSrc`      `Buffer` object containing the raw source of the asset.
-    Mandatory unless the `rawSrcProxy` option is provided.
-  - `rawSrcProxy` Function that provides the raw source of the asset
-  to a callback (and optionally a metadata object),
-  for example by loading it from disc or fetching it
-  via http. Mandatory unless the `rawSrc` option is
-  provided.
-  - `contentType` (optional) The Content-Type (MIME type) of the asset.
-  For subclasses of Asset there will be a reasonable
-  default. Can also be provided by the `rawSrcProxy`
-  in the `metadata` object.
-  - `url`         (optional) The fully qualified (absolute) url of the
-  asset. If not provided, the asset will be considered
-  inline. Can also be provided by the `rawSrcProxy`
-  in the `metadata' object (think HTTP redirects).
-  - `extension`   The desired file name extension of the asset. Will
-  be extracted from the `url` option if possible, and in
-  that case, the `extension` option will be ignored.
-  - `fileName`    The desired file name of the asset. Will
-  be extracted from the `url` option if possible, and in
-  that case, the `fileName` option will be ignored.
-  Takes precedence over the `extension` config option.
+  ###*
+   * Create a new Asset instance. Note that the Asset base class is only
+     intended to be used to represent assets for which there's no specific
+     subclass. Most of the time it's unnecessary to create asset objects
+     directly. When you need to manipulate assets that already exist on disc
+     or on a web server, the `loadAssets` and `populate` transforms are the
+     easiest way to get the objects created. See the section about transforms
+     below.
+   * @param {Buffer} config.rawSrc Buffer containing the raw source of the asset.
+      Mandatory unless the `rawSrcProxy` option is provided.
+   * @param {Function} config.rawSrcProxy Function that provides the raw source
+      of the asset to a callback (and optionally a metadata object), for
+      example by loading it from disc or fetching it via http. Mandatory
+      unless the `rawSrc` option is provided.
+   * @param {String} [config.contentType] The Content-Type (MIME type) of the
+      asset. For subclasses of Asset there will be a reasonable default. Can
+      also be provided by the `rawSrcProxy` in the `metadata` object.
+   * @param {String} [config.url] The fully qualified (absolute) url
+      of the asset. If not provided, the asset will be considered inline. Can
+      also be provided by the `rawSrcProxy` in the `metadata' object (think
+      HTTP redirects).
+   * @param {String} config.extension The desired file name extension of the asset.
+      Will be extracted from the `url` option if possible, and in that case,
+      the `extension` option will be ignored.
+   * @param {String} config.fileName The desired file name of the asset. Will be
+      extracted from the `url` option if possible, and in that case, the
+      `fileName` option will be ignored. Takes precedence over the `extension`
+      config option.
   ###
   constructor: (config) ->
     if 'lastKnownByteLength' of config
@@ -81,7 +69,8 @@ class Asset extends EventEmitter
         @_extension = path.extname(@_fileName)
       delete config._fileName
 
-      @_extension = config.extension  if 'extension' of config and ('_extension' not of this)
+      if 'extension' of config and ('_extension' not of this)
+        @_extension = config.extension
       delete config.extension
     if config.outgoingRelations
       @_outgoingRelations = config.outgoingRelations.map((outgoingRelation) ->
@@ -92,95 +81,70 @@ class Asset extends EventEmitter
     _.extend this, config
     @id = '' + _.uniqueId()
 
-  ###
-  asset.isAsset
-  =============
-  {Boolean} Property that's true for all Asset instances. Avoids reliance on
-  the `instanceof` operator.
-  @api public
+  ###*
+   * Property that's true for all Asset instances. Avoids reliance on the
+     `instanceof` operator.
+   * @type {Boolean}
+   * @public
   ###
   isAsset: true
 
   isResolved: true
 
-  ###
-  asset.isExternalizable
-  ======================
-
-  {Boolean} Whether the asset occurs in a context where it can be
-  made external. If false, the asset will stay inline. Useful for
-  "always inline" assets pointed to by HtmlConditionalComment,
-  HtmlDataBindAttribute, and HtmlKnockoutContainerless
-  relations. Override when creating the asset.
+  ###*
+   * Whether the asset occurs in a context where it can be made external. If
+     false, the asset will stay inline. Useful for "always inline" assets
+     pointed to by HtmlConditionalComment, HtmlDataBindAttribute, and
+     HtmlKnockoutContainerless relations. Override when creating the asset.
+   * @type {Boolean}
   ###
   isExternalizable: true
 
-  ###
-  asset.contentType
-  =================
-
-  {String} The Content-Type (MIME type) of the asset.
-
-  @api public
+  ###*
+   * The Content-Type (MIME type) of the asset.
+   * @type {String}
+   * @public
   ###
   contentType: 'application/octet-stream'
 
-  ###
-  asset.defaultExtension (getter)
-  ===============================
-
-  {String} The default extension for the asset type.
-
-  @api public
+  ###*
+   * The default extension for the asset type.
+   * @type {String}
+   * @readOnly
+   * @public
   ###
   @property 'defaultExtension',
     get: ->
       (@supportedExtensions and @supportedExtensions[0]) or ''
 
+  ###*
+   * Some asset classes support inspection and manipulation using a high level
+     interface. If you modify the parse tree, you have to call
+     `asset.markDirty()` so any cached serializations of the asset are
+     invalidated.
+   * These are the formats you'll get:
+   * `Html` and `Xml`: jsdom document object
+     (https://github.com/tmpvar/jsdom).
+   * `Css`: CSSOM CSSStyleSheet object (https://github.com/NV/CSSOM).
+   * `JavaScript`: UglifyJS AST object (https://github.com/mishoo/UglifyJS).
+   * `Json`: Regular JavaScript object (the result of JSON.parse on the
+     decoded source).
+   * `CacheManifest`: A JavaScript object with a key for each section present
+     in the manifest (`CACHE`, `NETWORK`, `REMOTE`). The value is an array
+     with an item for each entry in the section. Refer to the source for
+     details.
+   * @type {Object}
+   * @public
   ###
-  asset.parseTree (getter)
-  ========================
+  parseTree: undefined
 
-  Some asset classes support inspection and manipulation using a high level
-  interface. If you modify the parse tree, you have to call
-  `asset.markDirty()` so any cached serializations of the asset are
-  invalidated.
-
-  These are the formats you'll get:
-
-  `Html` and `Xml`:
-  jsdom document object (https://github.com/tmpvar/jsdom).
-
-  `Css`
-  CSSOM CSSStyleSheet object (https://github.com/NV/CSSOM).
-
-  `JavaScript`
-  UglifyJS AST object (https://github.com/mishoo/UglifyJS).
-
-  `Json`
-  Regular JavaScript object (the result of JSON.parse on the decoded source).
-
-  `CacheManifest`
-  A JavaScript object with a key for each section present in the manifest
-  (`CACHE`, `NETWORK`, `REMOTE`). The value is an array with an item for each
-  entry in the section. Refer to the source for details.
-
-  @api public
-  ###
-
-  ###
-  asset.load(cb)
-  ==============
-
-  Makes sure the asset is loaded, then calls the supplied callback. This is
-  Asset's only async method, as soon as it is loaded, everything can happen
-  synchronously.
-
-  Usually you'll want to use `transforms.loadAssets`, which will handle this
-  automatically.
-
-  @param {Function} cb The callback to invoke when the asset is loaded.
-  @api public
+  ###*
+   * Makes sure the asset is loaded, then calls the supplied callback. This is
+     Asset's only async method, as soon as it is loaded, everything can happen
+     synchronously. Usually you'll want to use `transforms.loadAssets`, which
+     will handle this automatically.
+   * @param {Function} cb The callback to invoke when the asset is loaded.
+   * @public
   ###
   load: (cb) ->
     that = this
@@ -212,17 +176,19 @@ class Asset extends EventEmitter
       setImmediate ->
         cb new Error('Asset.load: No rawSrc or rawSrcProxy found, cannot load')
 
+  ###*
+   * @readOnly
+  ###
   @property 'isLoaded',
     get: ->
       '_rawSrc' of this or '_parseTree' of this or (@isText and '_text' of this)
 
-  ###
-  asset.nonInlineAncestor (getter)
-  ================================
-
-  Get the first non-inline ancestor asset by following the incoming relations,
-  ie. the first asset that has a url. Returns the asset itself if it's not
-  inline, and null if the asset is inline, but not in an AssetGraph.
+  ###*
+   * Get the first non-inline ancestor asset by following the incoming
+     relations, ie. the first asset that has a url. Returns the asset itself
+     if it's not inline, and null if the asset is inline, but not in an
+     AssetGraph.
+   * @readOnly
   ###
   @property 'nonInlineAncestor',
     get: ->
@@ -235,21 +201,16 @@ class Asset extends EventEmitter
       else
         this
 
-  ###
-  asset.extension (getter/setter)
-  ===============================
-
-  The file name extension for the asset (String). It is automatically kept in
-  sync with the url, but preserved if the asset is inlined or set to a value
-  that ends with a slash.
-
-  If updated, the url of the asset will also be updated.
-
-  The extension includes the leading dot and is thus kept in the same format
-  as `require('path').extname` and the `basename` command line utility use.
-
-  @return {String} The extension part of the url, eg. ".html" or ".css".
-  @api public
+  ###*
+   * The file name extension for the asset (String). It is automatically kept
+     in sync with the url, but preserved if the asset is inlined or set to a
+     value that ends with a slash.
+   * If updated, the url of the asset will also be updated.
+   * The extension includes the leading dot and is thus kept in the same
+     format as `require('path').extname` and the `basename` command line
+     utility use.
+   * @return {String} The extension part of the url, eg. ".html" or ".css".
+   * @public
   ###
   @property 'extension',
     get: ->
@@ -268,19 +229,14 @@ class Asset extends EventEmitter
           @_fileName += extension
       @_extension = extension
 
-  ###
-  asset.fileName (getter/setter)
-  ==============================
-
-  The file name for the asset (String). It is automatically kept in sync with
-  the url, but preserved if the asset is inlined or set to a value that ends
-  with a slash.
-
-  If updated, the url of the asset will also be updated.
-
-  @return {String} The file name part of the url, eg. "foo.html"
-  or "styles.css".
-  @api public
+  ###*
+   * The file name for the asset (String). It is automatically kept in sync
+     with the url, but preserved if the asset is inlined or set to a value
+     that ends with a slash. If updated, the url of the asset will also be
+     updated.
+   * @return {String} The file name part of the url, eg. "foo.html" or
+     "styles.css".
+   * @public
   ###
   @property 'fileName',
     get: ->
@@ -292,25 +248,19 @@ class Asset extends EventEmitter
       @_extension = path.extname(fileName)
       @_fileName = fileName
 
-  ###
-  asset.rawSrc (getter/setter)
-  ============================
-
-  Get or set the raw source of the asset.
-
-  If the internal state has been changed since the asset was initialized, it
-  will automatically be reserialized when this property is retrieved, for
-  example:
-
-  var htmlAsset = new AssetGraph.Html({
-  rawSrc: new Buffer('<html><body>Hello!</body></html>')
-  });
-  htmlAsset.parseTree.body.innerHTML = "Bye!";
-  htmlAsset.markDirty();
-  htmlAsset.rawSrc.toString(); // "<html><body>Bye!</body></html>"
-
-  @return {Buffer} The raw source.
-  @api public
+  ###*
+   * Get or set the raw source of the asset. If the internal state has been
+     changed since the asset was initialized, it will automatically be
+     reserialized when this property is retrieved.
+   * @example
+   * var htmlAsset = new AssetGraph.Html({
+   *   rawSrc: new Buffer('<html><body>Hello!</body></html>')
+   * });
+   * htmlAsset.parseTree.body.innerHTML = "Bye!";
+   * htmlAsset.markDirty();
+   * htmlAsset.rawSrc.toString(); // "<html><body>Bye!</body></html>"
+   * @return {Buffer} The raw source.
+   * @public
   ###
   @property 'rawSrc',
     get: ->
@@ -332,8 +282,11 @@ class Asset extends EventEmitter
     @_rawSrc = rawSrc
     @_lastKnownByteLength = rawSrc.length
 
-  # Doesn't force a serialization of the asset if a value has previously been
-  # recorded:
+  ###*
+   * Doesn't force a serialization of the asset if a value has previously been
+     recorded.
+   * @readOnly
+  ###
   @property 'lastKnownByteLength',
     get: ->
       if @_rawSrc
@@ -343,12 +296,10 @@ class Asset extends EventEmitter
       else
         @rawSrc.length # Force the rawSrc to be computed
 
-  ###
-  Unload the asset body. If the asset is in a graph, also
-  remove the relations from the graph along with any inline
-  assets.
-  Also used internally right to clean up before overwriting
-  .rawSrc or .text.
+  ###*
+   * Unload the asset body. If the asset is in a graph, also remove the
+     relations from the graph along with any inline assets. Also used
+     internally right to clean up before overwriting .rawSrc or .text.
   ###
   unload: ->
     # Remove inline assets and outgoing relations:
@@ -360,21 +311,16 @@ class Asset extends EventEmitter
         if outgoingRelation.to.isAsset and outgoingRelation.to.isInline
           @assetGraph.removeAsset outgoingRelation.to
       ), this
+
     delete @isPopulated
-
     delete @_outgoingRelations
-
     delete @_rawSrc
-
     delete @_text
-
     delete @_parseTree
 
-  ###
-  asset.md5Hex (getter)
-  =====================
-
-  Get the current md5 hex of the asset.
+  ###*
+   * Get the current md5 hex of the asset.
+   * @readOnly
   ###
   @property 'md5Hex',
     get: ->
@@ -383,15 +329,9 @@ class Asset extends EventEmitter
       @_md5Hex
 
   ###
-  asset.url (getter/setter)
-  =========================
-
-  Get or set the absolute url of the asset (String).
-
-  The url will use the `file:` schema if loaded from disc. Will be falsy for
-  inline assets.
-
-  @api public
+   * Get or set the absolute url of the asset (String). The url will use the
+     `file:` schema if loaded from disc. Will be falsy for inline assets.
+   * @public
   ###
   @property 'url',
     get: ->
@@ -437,43 +377,37 @@ class Asset extends EventEmitter
           [].concat(@assetGraph._objInBaseAssetPaths[@id]).forEach ((affectedRelation) ->
             unless oldUrl
 
-              # Un-inlining the asset, need to recompute all base asset paths it's a member of:
+              # Un-inlining the asset, need to recompute all base asset paths
+              # it's a member of:
               affectedRelation._unregisterBaseAssetPath()
               affectedRelation._registerBaseAssetPath()
-            affectedRelation.refreshHref()  if affectedRelation.baseAsset is this
+            if affectedRelation.baseAsset is this
+              affectedRelation.refreshHref()
           ), this
           @assetGraph.findRelations(to: this).forEach ((incomingRelation) ->
             incomingRelation.refreshHref()
           ), this
 
-  ###
-  asset.isInline (getter)
-  =======================
-
-  Determine whether the asset is inline (shorthand for checking whether it has
-  a url).
-
-  @return {Boolean} Whether the asset is inline.
+  ###*
+   * Determine whether the asset is inline (shorthand for checking whether it
+     has a url).
+   * @return {Boolean} Whether the asset is inline.
+   * @readOnly
   ###
   @property 'isInline',
     get: ->
       not @url
 
-  ###
-  asset.markDirty()
-  =================
-
-  Sets the `dirty` flag of the asset, which is the way to say that the asset
-  has been manipulated since it was first loaded (read from disc or loaded via
-  http). For inline assets the flag is set if the asset has been manipulated
-  since it was last synchronized with (copied into) its containing asset.
-
-  For assets that support a `text` or `parseTree` property, calling
-  `markDirty()` will invalidate any cached serializations of the
-  asset.
-
-  @return {Asset} The asset itself (chaining-friendly).
-  @api public
+  ###*
+   * Sets the `dirty` flag of the asset, which is the way to say that the
+     asset has been manipulated since it was first loaded (read from disc or
+     loaded via http). For inline assets the flag is set if the asset has been
+     manipulated since it was last synchronized with (copied into) its
+     containing asset.
+   * For assets that support a `text` or `parseTree` property, calling
+     `markDirty()` will invalidate any cached serializations of the asset.
+   * @return {Asset} The asset itself (chaining-friendly).
+   * @public
   ###
   markDirty: ->
     @isDirty = true
@@ -488,19 +422,15 @@ class Asset extends EventEmitter
       else @incomingRelations[0].inline() if @incomingRelations.length is 1
     this
 
-  ###
-  asset.outgoingRelations (getter)
-  ================================
-
-  Get the outgoing relations of the asset. Only supported by a few subclasses
-  (`Css`, `Html`, `CacheManifest`, and `JavaScript`), all others return an
-  empty array.
-
-  If the asset is part of an AssetGraph, it will be queried for
-  the relations, otherwise the parse tree will be traversed.
-
-  @return {Array[Relation]} The outgoing relations.
-  @api public
+  ###*
+   * Get the outgoing relations of the asset. Only supported by a few
+     subclasses (`Css`, `Html`, `CacheManifest`, and `JavaScript`), all others
+     return an empty array.
+   * If the asset is part of an AssetGraph, it will be queried for the
+     relations, otherwise the parse tree will be traversed.
+   * @return {Array[Relation]} The outgoing relations.
+   * @public
+   * @readOnly
   ###
   @property 'outgoingRelations',
     get: ->
@@ -515,43 +445,35 @@ class Asset extends EventEmitter
   findOutgoingRelationsInParseTree: ->
     []
 
-  ###
-  asset.incomingRelations (getter)
-  ================================
-
-  Get the relations pointing at this asset. Only supported if the
-  asset is part of an AssetGraph.
-
-  @return {Array[Relation]} The incoming relations.
-  @api public
+  ###*
+   * Get the relations pointing at this asset. Only supported if the asset is
+     part of an AssetGraph.
+   * @return {Array[Relation]} The incoming relations.
+   * @public
+   * @readOnly
   ###
   @property 'incomingRelations',
     get: ->
       unless @assetGraph
-        throw new Error("Asset.incomingRelations getter: Asset is not part of an AssetGraph")
+        throw new Error('Asset.incomingRelations getter: Asset is not part of an AssetGraph')
       @assetGraph.findRelations to: this
 
-  ###
-  asset.populate()
-  ================
-
-  Go through the outgoing relations of the asset and add the ones
-  that refer to assets that are already part of the
-  graph. Recurses into inline assets.
-
-  You shouldn't need to call this manually.
-
-  @param {Asset} asset The asset.
-  @return {Asset} The asset itself (chaining-friendly).
-  @api public
+  ###*
+   * Go through the outgoing relations of the asset and add the ones that
+     refer to assets that are already part of the graph. Recurses into inline
+     assets. You shouldn't need to call this manually.
+   * @param {Asset} asset The asset.
+   * @return {Asset} The asset itself.
+   * @chainable
+   * @public
   ###
   populate: ->
     unless @assetGraph
-      throw new Error("Asset.populateRelationsToExistingAssets: Asset is not part of an AssetGraph")
+      throw new Error('Asset.populateRelationsToExistingAssets: Asset is not part of an AssetGraph')
     if @isLoaded and not @keepUnpopulated and not @isPopulated
       @outgoingRelations.forEach ((outgoingRelation) ->
         unless outgoingRelation.assetGraph
-          if outgoingRelation.to.url or typeof outgoingRelation.to is "string"
+          if outgoingRelation.to.url or typeof outgoingRelation.to is 'string'
 
             # See if the target asset is already in the graph by looking up
             # its url:
@@ -583,19 +505,14 @@ class Asset extends EventEmitter
       ), this
       @isPopulated = true
 
-  ###
-  asset.replaceWith(newAsset)
-  ===========================
-
-  Replace the asset in the graph with another asset, then remove it from the
-  graph.
-
-  Updates the incoming relations of the old asset to point at the new one and
-  preserves the url of the old asset if it's not inline.
-
-  @param {Asset} newAsset The asset to put replace this one with.
-  @return {Asset} The new asset.
-  @api public
+  ###*
+   * Replace the asset in the graph with another asset, then remove it from
+     the graph.
+   * Updates the incoming relations of the old asset to point at the new one
+     and preserves the url of the old asset if it's not inline.
+   * @param {Asset} newAsset The asset to put replace this one with.
+   * @return {Asset} The new asset.
+   * @public
   ###
   replaceWith: (newAsset) ->
     if not @assetGraph or (@id not of @assetGraph.idIndex)
@@ -613,20 +530,15 @@ class Asset extends EventEmitter
     newAsset.url = @url  if @url and not newAsset.url
     newAsset
 
-  ###
-  asset.clone([incomingRelations])
-  ================================
-
-  Clone this asset instance and add the clone to the graph if this instance is
-  part of a graph. As an extra service, optionally update some caller-
-  specified relations to point at the clone.
-
-  If this instance isn't inline, a url is made up for the clone.
-
-  @param {Array[Relation]|Relation} incomingRelations (optional) Some incoming
-      relations that should be pointed at the clone.
-  @return {Asset} The cloned asset.
-  @api public
+  ###*
+   * Clone this asset instance and add the clone to the graph if this instance
+     is part of a graph. As an extra service, optionally update some caller-
+     specified relations to point at the clone. If this instance isn't inline,
+     a url is made up for the clone.
+   * @param {Array[Relation]|Relation} [incomingRelations] Some incoming
+     relations that should be pointed at the clone.
+   * @return {Asset} The cloned asset.
+   * @public
   ###
   clone: (incomingRelations, preserveUrl) ->
     if incomingRelations and not @assetGraph
@@ -646,7 +558,7 @@ class Asset extends EventEmitter
       constructorOptions.rawSrc = @rawSrc
 
     # FIXME: Belongs in the subclass
-    if typeof @_isFragment isnt "undefined"
+    if @_isFragment?
       constructorOptions._isFragment = @_isFragment
     if @type is "JavaScript"
       # FIXME: Belongs in the subclass
@@ -674,18 +586,17 @@ class Asset extends EventEmitter
       delete clone.baseAssetSubstitute
     clone
 
-  ###
-  asset.toString()
-  ================
-
-  Get a brief text containing the type, id, and url (if not inline) of the
-  asset.
-  @return {String} The string, eg. "[JavaScript/141 file:///the/thing.js]"
-  @api public
+  ###*
+   * Get a brief text containing the type, id, and url (if not inline) of the asset.
+   * @return {String} The string, eg. "[JavaScript/141 file:///the/thing.js]"
+   * @public
   ###
   toString: ->
-    "[#{@type}/#{@id}" + "#{if @url then " #{@url}" else ''}]"
+    "[#{@type}/#{@id}#{if @url then " #{@url}" else ''}]"
 
+  ###*
+   * @readOnly
+  ###
   @property 'urlOrDescription',
     get: ->
       @url or ("inline #{@type}#{if @nonInlineAncestor then " in " + @nonInlineAncestor.url else ''}")
