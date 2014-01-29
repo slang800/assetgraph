@@ -10,72 +10,70 @@ class CacheManifest extends Text
   contentType: 'text/cache-manifest'
   supportedExtensions: ['.appcache']
 
-  @property 'parseTree',
-    get: ->
-      unless @_parseTree
-        parseTree = {}
-        syntaxErrors = []
-        currentSectionName = "CACHE"
-        @text.split(/\r?\n|\n?\r/).forEach ((line, i) ->
-          if i is 0
-            if line is "CACHE MANIFEST"
-              return # Skip
-            else
-              console.warn "Warning: First line of cache manifest wasn't CACHE MANIFEST"
-          matchNewSection = line.match(/^(CACHE|NETWORK|FALLBACK):\s*$/)
-          if matchNewSection
-            currentSectionName = matchNewSection[1]
-          else unless /^\s*$/.test(line)
-            parseTree[currentSectionName] = []  unless currentSectionName of parseTree
-            if /^\s*#/.test(line)
-              parseTree[currentSectionName].push comment: line.replace(/^\s*#/, "")
-            else
-              tokens = line.replace(/^\s+|\s+$/g).split(" ") # Trim just in case
-              node = undefined
-              if tokens.length is ((if currentSectionName is "FALLBACK" then 2 else 1))
-                parseTree[currentSectionName].push tokens: tokens
-              else
-                syntaxErrors.push new errors.SyntaxError(
-                  message: "CacheManifest.parseTree getter: Parse error in section " + currentSectionName + ", line " + i + ": " + line
-                  line: i
-                )
-        ), this
-        if syntaxErrors.length > 0
-          if @assetGraph
-            syntaxErrors.forEach ((syntaxError) ->
-              @assetGraph.emit "error", syntaxError
-            ), this
+  @getter 'parseTree', ->
+    unless @_parseTree
+      parseTree = {}
+      syntaxErrors = []
+      currentSectionName = "CACHE"
+      @text.split(/\r?\n|\n?\r/).forEach ((line, i) ->
+        if i is 0
+          if line is "CACHE MANIFEST"
+            return # Skip
           else
-            throw new Error(_.pluck(syntaxErrors, "message").join("\n"))
-        @_parseTree = parseTree
-      @_parseTree
-    set: (parseTree) ->
-      @unload()
-      @_parseTree = parseTree
-      @markDirty()
-
-  @property 'text',
-    get: ->
-      unless "_text" of this
-        if @_parseTree
-          getSectionText = (nodes) ->
-            nodes.map((node) ->
-              if "comment" of node
-                "#" + node.comment
-              else
-                node.tokens.join " "
-            ).join("\n") + "\n"
-          @_text = "CACHE MANIFEST\n"
-          
-          # The heading for the CACHE section can be omitted if it's the first
-          # thing in the manifest, so put it first if there is one.
-          @_text += getSectionText(@_parseTree.CACHE)  if @_parseTree.CACHE
-          _.each @_parseTree, ((nodes, sectionName) ->
-            @_text += sectionName + ":\n" + getSectionText(nodes)  if sectionName isnt "CACHE" and nodes.length
+            console.warn "Warning: First line of cache manifest wasn't CACHE MANIFEST"
+        matchNewSection = line.match(/^(CACHE|NETWORK|FALLBACK):\s*$/)
+        if matchNewSection
+          currentSectionName = matchNewSection[1]
+        else unless /^\s*$/.test(line)
+          parseTree[currentSectionName] = []  unless currentSectionName of parseTree
+          if /^\s*#/.test(line)
+            parseTree[currentSectionName].push comment: line.replace(/^\s*#/, "")
+          else
+            tokens = line.replace(/^\s+|\s+$/g).split(" ") # Trim just in case
+            node = undefined
+            if tokens.length is ((if currentSectionName is "FALLBACK" then 2 else 1))
+              parseTree[currentSectionName].push tokens: tokens
+            else
+              syntaxErrors.push new errors.SyntaxError(
+                message: "CacheManifest.parseTree getter: Parse error in section " + currentSectionName + ", line " + i + ": " + line
+                line: i
+              )
+      ), this
+      if syntaxErrors.length > 0
+        if @assetGraph
+          syntaxErrors.forEach ((syntaxError) ->
+            @assetGraph.emit "error", syntaxError
           ), this
         else
-          @_text = @_getTextFromRawSrc()
-      @_text
+          throw new Error(_.pluck(syntaxErrors, "message").join("\n"))
+      @_parseTree = parseTree
+    @_parseTree
+  set: (parseTree) ->
+    @unload()
+    @_parseTree = parseTree
+    @markDirty()
+
+  @getter 'text', ->
+    unless "_text" of this
+      if @_parseTree
+        getSectionText = (nodes) ->
+          nodes.map((node) ->
+            if "comment" of node
+              "#" + node.comment
+            else
+              node.tokens.join " "
+          ).join("\n") + "\n"
+        @_text = "CACHE MANIFEST\n"
+        
+        # The heading for the CACHE section can be omitted if it's the first
+        # thing in the manifest, so put it first if there is one.
+        @_text += getSectionText(@_parseTree.CACHE)  if @_parseTree.CACHE
+        _.each @_parseTree, ((nodes, sectionName) ->
+          @_text += sectionName + ":\n" + getSectionText(nodes)  if sectionName isnt "CACHE" and nodes.length
+        ), this
+      else
+        @_text = @_getTextFromRawSrc()
+    @_text
 
   findOutgoingRelationsInParseTree: ->
     outgoingRelations = []

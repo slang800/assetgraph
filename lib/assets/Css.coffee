@@ -19,67 +19,65 @@ class Css extends Text
   supportedExtensions: ['.css']
   isPretty: false
 
-  @property 'encoding',
-    get: ->
-      unless @_encoding
-        if '_text' of this
-          @_encoding = extractEncodingFromText(@_text) or @defaultEncoding
-        else if @_rawSrc
-          @_encoding = extractEncodingFromText(@_rawSrc.toString('binary', 0, Math.min(1024, @_rawSrc.length))) or @defaultEncoding
-        else
-          @_encoding = @defaultEncoding
-      @_encoding
-    set: (encoding) ->
-      if encoding isnt @encoding
-        # Make sure this._text exists so the rawSrc is decoded before the
-        # original encoding is thrown away
-        text = @text
-        delete @_rawSrc
+  @getter 'encoding', ->
+    unless @_encoding
+      if '_text' of this
+        @_encoding = extractEncodingFromText(@_text) or @defaultEncoding
+      else if @_rawSrc
+        @_encoding = extractEncodingFromText(@_rawSrc.toString('binary', 0, Math.min(1024, @_rawSrc.length))) or @defaultEncoding
+      else
+        @_encoding = @defaultEncoding
+    @_encoding
 
-        @_encoding = encoding
-        @markDirty()
+  @setter 'encoding', (encoding) ->
+    if encoding isnt @encoding
+      # Make sure this._text exists so the rawSrc is decoded before the
+      # original encoding is thrown away
+      text = @text
+      delete @_rawSrc
 
-  @property 'text',
-    get: ->
-      unless '_text' of this
-        if @_parseTree
-          @_text = @_parseTree.toString()
-          @_text = cssmin.cssmin(@_text)  unless @isPretty
-        else
-          @_text = @_getTextFromRawSrc()
-      @_text
-
-  @property 'parseTree',
-    get: ->
-      unless @_parseTree
-        # CSSOM gets the @charset declaration mixed up with the first selector:
-        try
-          @_parseTree = cssom.parse(@text.replace(/@charset\s*([\'\"])\s*[\w\-]+\s*\1;/, ''))
-        catch e
-          err = new errors.ParseError(
-            message: "Parse error in #{@urlOrDescription}(line #{e.line}, column #{e["char"]}):\n#{e.message}#{if e.styleSheet then "\nFalling back to using the #{e.styleSheet.cssRules.length} parsed CSS rules" else ''}"
-            styleSheet: e.styleSheet
-            line: e.line
-            column: e['char']
-            asset: this
-          )
-          if @assetGraph
-            if err.styleSheet
-              @_parseTree = err.styleSheet
-            else
-              @_parseTree = cssRules: []
-            @assetGraph.emit 'error', err
-          else
-            throw err
-      @_parseTree
-    set: (parseTree) ->
-      @unload()
-      @_parseTree = parseTree
+      @_encoding = encoding
       @markDirty()
 
-  @property 'isEmpty',
-    get: ->
-      @parseTree.cssRules.length is 0
+  @getter 'text', ->
+    unless '_text' of this
+      if @_parseTree
+        @_text = @_parseTree.toString()
+        @_text = cssmin.cssmin(@_text)  unless @isPretty
+      else
+        @_text = @_getTextFromRawSrc()
+    @_text
+
+  @getter 'parseTree', ->
+    unless @_parseTree
+      # CSSOM gets the @charset declaration mixed up with the first selector:
+      try
+        @_parseTree = cssom.parse(@text.replace(/@charset\s*([\'\"])\s*[\w\-]+\s*\1;/, ''))
+      catch e
+        err = new errors.ParseError(
+          message: "Parse error in #{@urlOrDescription}(line #{e.line}, column #{e["char"]}):\n#{e.message}#{if e.styleSheet then "\nFalling back to using the #{e.styleSheet.cssRules.length} parsed CSS rules" else ''}"
+          styleSheet: e.styleSheet
+          line: e.line
+          column: e['char']
+          asset: this
+        )
+        if @assetGraph
+          if err.styleSheet
+            @_parseTree = err.styleSheet
+          else
+            @_parseTree = cssRules: []
+          @assetGraph.emit 'error', err
+        else
+          throw err
+    @_parseTree
+
+  @setter 'parseTree', (parseTree) ->
+    @unload()
+    @_parseTree = parseTree
+    @markDirty()
+
+  @getter 'isEmpty', ->
+    @parseTree.cssRules.length is 0
 
   minify: ->
     @isPretty = false

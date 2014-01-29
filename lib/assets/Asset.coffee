@@ -15,9 +15,6 @@ Function::getter = (prop, get) ->
 Function::setter = (prop, set) ->
   Object.defineProperty @prototype, prop, {set, configurable: yes}
 
-Function::property = (prop, desc) ->
-  Object.defineProperty @prototype, prop, desc
-
 ###*
  * An asset object represents a single node in an AssetGraph, but can be used
    and manipulated on its own outside the graph context.
@@ -119,9 +116,8 @@ class Asset extends EventEmitter
    * @readOnly
    * @public
   ###
-  @property 'defaultExtension',
-    get: ->
-      (@supportedExtensions and @supportedExtensions[0]) or ''
+  @getter 'defaultExtension', ->
+    (@supportedExtensions and @supportedExtensions[0]) or ''
 
   ###*
    * Some asset classes support inspection and manipulation using a high level
@@ -183,9 +179,8 @@ class Asset extends EventEmitter
   ###*
    * @readOnly
   ###
-  @property 'isLoaded',
-    get: ->
-      '_rawSrc' of this or '_parseTree' of this or (@isText and '_text' of this)
+  @getter 'isLoaded', ->
+    '_rawSrc' of this or '_parseTree' of this or (@isText and '_text' of this)
 
   ###*
    * Get the first non-inline ancestor asset by following the incoming
@@ -194,16 +189,15 @@ class Asset extends EventEmitter
      AssetGraph.
    * @readOnly
   ###
-  @property 'nonInlineAncestor',
-    get: ->
-      if @isInline
-        if @assetGraph
-          incomingRelations = @incomingRelations
-          if incomingRelations.length > 0
-            return incomingRelations[0].from.nonInlineAncestor
-        null
-      else
-        this
+  @getter 'nonInlineAncestor', ->
+    if @isInline
+      if @assetGraph
+        incomingRelations = @incomingRelations
+        if incomingRelations.length > 0
+          return incomingRelations[0].from.nonInlineAncestor
+      null
+    else
+      this
 
   ###*
    * The file name extension for the asset (String). It is automatically kept
@@ -216,22 +210,21 @@ class Asset extends EventEmitter
    * @return {String} The extension part of the url, eg. ".html" or ".css".
    * @public
   ###
-  @property 'extension',
-    get: ->
-      if '_extension' of this
-        @_extension
-      else
-        @defaultExtension
+  @getter 'extension', ->
+    if '_extension' of this
+      @_extension
+    else
+      @defaultExtension
 
-    set: (extension) ->
-      unless @isInline
-        @url = @url.replace(/(?:\.\w+)?([?#]|$)/, "#{extension}$1")
-      else if '_fileName' of this
-        if '_extension' of this
-          @_fileName = path.basename(@_fileName, @_extension) + extension
-        else
-          @_fileName += extension
-      @_extension = extension
+  @setter 'extension', (extension) ->
+    unless @isInline
+      @url = @url.replace(/(?:\.\w+)?([?#]|$)/, "#{extension}$1")
+    else if '_fileName' of this
+      if '_extension' of this
+        @_fileName = path.basename(@_fileName, @_extension) + extension
+      else
+        @_fileName += extension
+    @_extension = extension
 
   ###*
    * The file name for the asset (String). It is automatically kept in sync
@@ -242,15 +235,14 @@ class Asset extends EventEmitter
      "styles.css".
    * @public
   ###
-  @property 'fileName',
-    get: ->
-      @_fileName  if '_fileName' of this
+  @getter 'fileName', ->
+    @_fileName  if '_fileName' of this
 
-    set: (fileName) ->
-      unless @isInline
-        @url = @url.replace(/[^\/?#]*([?#]|$)/, "#{fileName}$1")
-      @_extension = path.extname(fileName)
-      @_fileName = fileName
+  @setter 'fileName', (fileName) ->
+    unless @isInline
+      @url = @url.replace(/[^\/?#]*([?#]|$)/, "#{fileName}$1")
+    @_extension = path.extname(fileName)
+    @_fileName = fileName
 
   ###*
    * Get or set the raw source of the asset. If the internal state has been
@@ -266,21 +258,20 @@ class Asset extends EventEmitter
    * @return {Buffer} The raw source.
    * @public
   ###
-  @property 'rawSrc',
-    get: ->
-      unless @_rawSrc
-        err = new Error("Asset.rawSrc getter: Asset isn't loaded: #{@}")
-        if @assetGraph
-          @assetGraph.emit 'error', err
-        else
-          throw err
-      @_rawSrc
+  @getter 'rawSrc', ->
+    unless @_rawSrc
+      err = new Error("Asset.rawSrc getter: Asset isn't loaded: #{@}")
+      if @assetGraph
+        @assetGraph.emit 'error', err
+      else
+        throw err
+    @_rawSrc
 
-    set: (rawSrc) ->
-      @unload()
-      @_updateRawSrcAndLastKnownByteLength rawSrc
-      @populate() if @assetGraph
-      @markDirty()
+  @setter 'rawSrc', (rawSrc) ->
+    @unload()
+    @_updateRawSrcAndLastKnownByteLength rawSrc
+    @populate() if @assetGraph
+    @markDirty()
 
   _updateRawSrcAndLastKnownByteLength: (rawSrc) ->
     @_rawSrc = rawSrc
@@ -291,14 +282,13 @@ class Asset extends EventEmitter
      recorded.
    * @readOnly
   ###
-  @property 'lastKnownByteLength',
-    get: ->
-      if @_rawSrc
-        @_rawSrc.length
-      else if '_lastKnownByteLength' of this
-        @_lastKnownByteLength
-      else
-        @rawSrc.length # Force the rawSrc to be computed
+  @getter 'lastKnownByteLength', ->
+    if @_rawSrc
+      @_rawSrc.length
+    else if '_lastKnownByteLength' of this
+      @_lastKnownByteLength
+    else
+      @rawSrc.length # Force the rawSrc to be computed
 
   ###*
    * Unload the asset body. If the asset is in a graph, also remove the
@@ -326,71 +316,66 @@ class Asset extends EventEmitter
    * Get the current md5 hex of the asset.
    * @readOnly
   ###
-  @property 'md5Hex',
-    get: ->
-      unless @_md5Hex
-        @_md5Hex = crypto.createHash('md5').update(@rawSrc).digest('hex')
-      @_md5Hex
+  @getter 'md5Hex', ->
+    unless @_md5Hex
+      @_md5Hex = crypto.createHash('md5').update(@rawSrc).digest('hex')
+    @_md5Hex
 
   ###
    * Get or set the absolute url of the asset (String). The url will use the
      `file:` schema if loaded from disc. Will be falsy for inline assets.
    * @public
   ###
-  @property 'url',
-    get: ->
-      @_url
+  @getter 'url', ->
+    @_url
 
-    set: (url) ->
-      unless @isExternalizable
-        throw new Error("#{@toString()} cannot set url of non-externalizable asset")
-      oldUrl = @_url
-      if url and not /^[a-z\+]+:/.test(url)
+  @setter 'url', (url) ->
+    unless @isExternalizable
+      throw new Error("#{@toString()} cannot set url of non-externalizable asset")
+    oldUrl = @_url
+    if url and not /^[a-z\+]+:/.test(url)
+      # Non-absolute
+      baseUrl = oldUrl or (@assetGraph and @baseAsset and @baseAsset.nonInlineAncestor.url) or (@assetGraph and @assetGraph.root)
+      if baseUrl
+        if /^\/\//.test(url)
 
-        # Non-absolute
-        baseUrl = oldUrl or (@assetGraph and @baseAsset and @baseAsset.nonInlineAncestor.url) or (@assetGraph and @assetGraph.root)
-        if baseUrl
-          if /^\/\//.test(url)
-
-            # Protocol-relative
-            url = urlTools.resolveUrl(baseUrl, url)
-          else if /^\//.test(url)
-
-            # Root-relative
-            if /^file:/.test(baseUrl) and /^file:/.test(@assetGraph.root)
-              url = urlTools.resolveUrl(@assetGraph.root, url.substr(1))
-            else
-              url = urlTools.resolveUrl(baseUrl, url)
+          # Protocol-relative
+          url = urlTools.resolveUrl(baseUrl, url)
+        else if /^\//.test(url)
+          # Root-relative
+          if /^file:/.test(baseUrl) and /^file:/.test(@assetGraph.root)
+            url = urlTools.resolveUrl(@assetGraph.root, url.substr(1))
           else
-
-            # Relative
             url = urlTools.resolveUrl(baseUrl, url)
         else
-          throw new Error("Cannot find base url for resolving new url of #{@urlOrDescription} to non-absolute: #{url}")
-      if url isnt oldUrl
-        @_url = url
-        if url and not urlEndsWithSlashRegExp.test(url)
-          pathname = urlTools.parse(url).pathname
-          @_extension = path.extname(pathname)
-          @_fileName = path.basename(pathname)
-        if @assetGraph
+          # Relative
+          url = urlTools.resolveUrl(baseUrl, url)
+      else
+        throw new Error("Cannot find base url for resolving new url of #{@urlOrDescription} to non-absolute: #{url}")
+    if url isnt oldUrl
+      @_url = url
+      if url and not urlEndsWithSlashRegExp.test(url)
+        pathname = urlTools.parse(url).pathname
+        @_extension = path.extname(pathname)
+        @_fileName = path.basename(pathname)
+      if @assetGraph
 
-          # Update the AssetGraph's indices
-          if @assetGraph._relationsWithNoBaseAsset.length
-            @assetGraph.recomputeBaseAssets()
-          [].concat(@assetGraph._objInBaseAssetPaths[@id]).forEach ((affectedRelation) ->
-            unless oldUrl
+        # Update the AssetGraph's indices
+        if @assetGraph._relationsWithNoBaseAsset.length
+          @assetGraph.recomputeBaseAssets()
+        [].concat(@assetGraph._objInBaseAssetPaths[@id]).forEach ((affectedRelation) ->
+          unless oldUrl
 
-              # Un-inlining the asset, need to recompute all base asset paths
-              # it's a member of:
-              affectedRelation._unregisterBaseAssetPath()
-              affectedRelation._registerBaseAssetPath()
-            if affectedRelation.baseAsset is this
-              affectedRelation.refreshHref()
-          ), this
-          @assetGraph.findRelations(to: this).forEach ((incomingRelation) ->
-            incomingRelation.refreshHref()
-          ), this
+            # Un-inlining the asset, need to recompute all base asset paths
+            # it's a member of:
+            affectedRelation._unregisterBaseAssetPath()
+            affectedRelation._registerBaseAssetPath()
+          if affectedRelation.baseAsset is this
+            affectedRelation.refreshHref()
+        ), this
+        @assetGraph.findRelations(to: this).forEach ((incomingRelation) ->
+          incomingRelation.refreshHref()
+        ), this
 
   ###*
    * Determine whether the asset is inline (shorthand for checking whether it
@@ -398,9 +383,8 @@ class Asset extends EventEmitter
    * @return {Boolean} Whether the asset is inline.
    * @readOnly
   ###
-  @property 'isInline',
-    get: ->
-      not @url
+  @getter 'isInline',  ->
+    not @url
 
   ###*
    * Sets the `dirty` flag of the asset, which is the way to say that the
@@ -436,15 +420,14 @@ class Asset extends EventEmitter
    * @public
    * @readOnly
   ###
-  @property 'outgoingRelations',
-    get: ->
-      if @assetGraph and @isPopulated
-        return @assetGraph.findRelations(
-          from: this
-        , true)
-      unless @_outgoingRelations
-        @_outgoingRelations = @findOutgoingRelationsInParseTree()
-      @_outgoingRelations
+  @getter 'outgoingRelations', ->
+    if @assetGraph and @isPopulated
+      return @assetGraph.findRelations(
+        from: this
+      , true)
+    unless @_outgoingRelations
+      @_outgoingRelations = @findOutgoingRelationsInParseTree()
+    @_outgoingRelations
 
   findOutgoingRelationsInParseTree: ->
     []
@@ -456,11 +439,10 @@ class Asset extends EventEmitter
    * @public
    * @readOnly
   ###
-  @property 'incomingRelations',
-    get: ->
-      unless @assetGraph
-        throw new Error('Asset.incomingRelations getter: Asset is not part of an AssetGraph')
-      @assetGraph.findRelations to: this
+  @getter 'incomingRelations', ->
+    unless @assetGraph
+      throw new Error('Asset.incomingRelations getter: Asset is not part of an AssetGraph')
+    @assetGraph.findRelations to: this
 
   ###*
    * Go through the outgoing relations of the asset and add the ones that
@@ -604,8 +586,7 @@ class Asset extends EventEmitter
   ###*
    * @readOnly
   ###
-  @property 'urlOrDescription',
-    get: ->
-      @url or ("inline #{@type}#{if @nonInlineAncestor then " in #{@nonInlineAncestor.url}" else ''}")
+  @getter 'urlOrDescription', ->
+    @url or ("inline #{@type}#{if @nonInlineAncestor then " in #{@nonInlineAncestor.url}" else ''}")
 
 module.exports = Asset
