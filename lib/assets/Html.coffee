@@ -46,8 +46,10 @@ class Html extends Text
   @getter 'encoding', ->
     unless @_encoding
       
-      # An explicit encoding (Content-Type header, data: url charset, assetConfig) takes precedence, but if absent we should
-      # look for a <meta http-equiv='Content-Type' ...> tag with a charset before falling back to the defaultEncoding (utf-8)
+      # An explicit encoding (Content-Type header, data: url charset,
+      # assetConfig) takes precedence, but if absent we should look for a
+      # <meta http-equiv='Content-Type' ...> tag with a charset before falling
+      # back to the defaultEncoding (utf-8)
       if '_text' of this
         @_encoding = extractEncodingFromText(@_text) or @defaultEncoding
       else if @_rawSrc
@@ -58,8 +60,9 @@ class Html extends Text
 
   @setter 'encoding', (encoding) ->
     
-    # An intended side effect of getting this.parseTree before deleting this._rawSrc is that we're sure
-    # that the raw source has been decoded into this._text before the original encoding is thrown away.
+    # An intended side effect of getting this.parseTree before deleting
+    # this._rawSrc is that we're sure that the raw source has been decoded
+    # into this._text before the original encoding is thrown away.
     parseTree = @parseTree
     if parseTree.head
       existingMetaElements = parseTree.head.getElementsByTagName('meta')
@@ -118,8 +121,9 @@ class Html extends Text
         else
           throw err
       
-      # Jsdom (or its Html parser) doesn't strip the newline after the <!DOCTYPE> for some reason.
-      # Issue reported here: https://github.com/tmpvar/jsdom/issues/160
+      # Jsdom (or its Html parser) doesn't strip the newline after the
+      # <!DOCTYPE> for some reason. Issue reported here:
+      # https://github.com/tmpvar/jsdom/issues/160
       @_parseTree.removeChild @_parseTree.firstChild  if @_parseTree.firstChild and @_parseTree.firstChild.nodeName is '#text' and @_parseTree.firstChild.nodeValue is '\n'
     @_parseTree
 
@@ -197,9 +201,10 @@ class Html extends Text
                 node: node
               )
               
-              # Hack: If transforms.registerRequireJsConfig has run, make sure that we register the
-              # require.js paths in the inline script before resolving the a data-main attribute
-              # further down in the document.
+              # Hack: If transforms.registerRequireJsConfig has run, make sure
+              # that we register the require.js paths in the inline script
+              # before resolving the a data-main attribute further down in the
+              # document.
               if inlineAsset.type is 'JavaScript' and @assetGraph and @assetGraph.requireJsConfig
                 @assetGraph.requireJsConfig.registerConfigInJavaScript inlineAsset, this
             if node.hasAttribute('data-main')
@@ -454,8 +459,8 @@ class Html extends Text
             )
         else if nodeName is 'applet'
           ['archive', 'codebase'].forEach ((attributeName) ->
-            
-            # Note: Only supports one url in the archive attribute. The Html 4.01 spec says it can be a comma-separated list.
+            # Note: Only supports one url in the archive attribute. The Html
+            # 4.01 spec says it can be a comma-separated list.
             if @_isRelationUrl(node.getAttribute(attributeName))
               addOutgoingRelation new AssetGraph.HtmlApplet(
                 from: this
@@ -485,8 +490,8 @@ class Html extends Text
             node: node
           )
         if node.hasAttribute('data-bind')
-          
-          # See if the attribute value can be parsed as a Knockout.js data-bind:
+          # See if the attribute value can be parsed as a Knockout.js data-
+          # bind:
           javaScriptObjectLiteral = "({#{node.getAttribute("data-bind").replace(/^\s*\{(.*)\}\s*$/, "$1")}});"
           parseTree = null # Must be set to something falsy each time we make it here
           try
@@ -570,7 +575,8 @@ class Html extends Text
     outgoingRelations
 
   ###*
-   * Leaves conditional comments, Knockout.js containerless bindings, and SSIs alone even if removeComments is true.
+   * Leaves conditional comments, Knockout.js containerless bindings, and SSIs
+     alone even if removeComments is true.
    * @param {[type]} removeWhiteSpace [description]
    * @param {[type]} removeComments [description]
    * @return {[type]} [description]
@@ -587,22 +593,18 @@ class Html extends Text
           canRemoveLeadingWhiteSpace = processNode(childNode, isWithinSensitiveTag, canRemoveLeadingWhiteSpace, (if childNode.nextSibling then childNode.nextSibling.nodeType is childNode.TEXT_NODE and /^[ \t\n\r]/.test(childNode.nextSibling.nodeValue) else canRemoveTrailingWhiteSpace))
         else if childNode.nodeType is childNode.COMMENT_NODE
           if /^\s*\/?ko(?:\s|$)/.test(childNode.nodeValue)
-            
             # Knockout.js containerless binding start or end marker. Remove superfluous whitespace if removeWhiteSpace is true:
             childNode.nodeValue = childNode.nodeValue.replace(/^\s+|\s+$/g, '')  if removeWhiteSpace
           else if removeComments and not /^ASSETGRAPH DOCUMENT (?:START|END) MARKER$|^#|^\[if|^<!\[endif\]|^esi/.test(childNode.nodeValue)
-            
             # Non-SSI, non-conditional comment
             node.removeChild childNode
             i -= 1
           else
-            
             # Preserve whitespace after comment nodes that are preserved:
             canRemoveLeadingWhiteSpace = false
         else if childNode.nodeType is childNode.TEXT_NODE
           childNodeValue = childNode.nodeValue
           if childNode.previousSibling and childNode.previousSibling.nodeType is childNode.TEXT_NODE
-            
             # Collapse with neighbouring text node:
             childNodeValue = childNode.previousSibling.nodeValue + childNodeValue
             node.removeChild childNode.previousSibling
@@ -621,8 +623,8 @@ class Html extends Text
             i -= 1
         i += 1
       if node.childNodes.length is 0 and not isInWhiteSpaceInsensitiveContext
-        
-        # Whitespace after an empty tag in non-block level context should be preserved
+        # Whitespace after an empty tag in non-block level context should be
+        # preserved
         false
       else
         canRemoveLeadingWhiteSpace or isInWhiteSpaceInsensitiveContext

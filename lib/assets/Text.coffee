@@ -1,11 +1,10 @@
-util = require("util")
-_ = require("underscore")
-extendWithGettersAndSetters = require("../util/extendWithGettersAndSetters")
-Asset = require("./Asset")
-iconv = undefined
+util = require 'util'
+_ = require 'underscore'
+Asset = require './Asset'
 
+iconv = undefined
 try
-  iconv = require("iconv")
+  iconv = require 'iconv'
 
 ###
 new Text(options)
@@ -43,7 +42,7 @@ textAsset.rawSrc; // <Buffer c3 a6 c3 b8 c3 a5>
 ###
 class Text extends Asset
   constructor: (config) ->
-    if "text" of config
+    if 'text' of config
       @_text = config.text
       delete config.text
     if config.encoding
@@ -112,27 +111,27 @@ class Text extends Asset
 
   @getter 'rawSrc', ->
     unless @_rawSrc
-      if "_text" of this or @_parseTree
+      if '_text' of this or @_parseTree
         if /^utf-?8$/i.test(@encoding)
-          @_updateRawSrcAndLastKnownByteLength new Buffer(@text, "utf-8")
+          @_updateRawSrcAndLastKnownByteLength new Buffer(@text, 'utf-8')
         else if /^(?:us-?)?ascii$/i.test(@encoding)
-          @_updateRawSrcAndLastKnownByteLength new Buffer(@text, "ascii")
+          @_updateRawSrcAndLastKnownByteLength new Buffer(@text, 'ascii')
         else if iconv
           try
-            @_updateRawSrcAndLastKnownByteLength new iconv.Iconv("utf-8", @encoding).convert(@text)
+            @_updateRawSrcAndLastKnownByteLength new iconv.Iconv('utf-8', @encoding).convert(@text)
           catch err
-            err.message = "iconv: Converting " + @url + " from UTF-8 to " + @encoding + " failed:\n" + err.message
+            err.message = "iconv: Converting #{@url} from UTF-8 to #{@encoding} failed:\n#{err.message}"
             if @assetGraph
-              if err.code is "EILSEQ"
-                err.message += "\nTransliterating and ignoring further failures. Data corruption may occur."
-                @_updateRawSrcAndLastKnownByteLength new iconv.Iconv("utf-8", @encoding + "//TRANSLIT//IGNORE").convert(@text)
+              if err.code is 'EILSEQ'
+                err.message += '\nTransliterating and ignoring further failures. Data corruption may occur.'
+                @_updateRawSrcAndLastKnownByteLength new iconv.Iconv('utf-8', "#{@encoding }//TRANSLIT//IGNORE").convert(@text)
               @assetGraph.emit "error", err
             else
               throw err
         else
-          throw new Error("node-iconv not found. Cannot encode " + this + " as " + @encoding + ". " + "Please run 'npm install iconv' and try again")
+          throw new Error("node-iconv not found. Cannot encode #{this} as #{@encoding}. Please run 'npm install iconv' and try again")
       else
-        throw new Error("Text.rawSrc getter: No _rawSrc or _text property found, asset not loaded?")
+        throw new Error('Text.rawSrc getter: No _rawSrc or _text property found, asset not loaded?')
     @_rawSrc
 
   @setter 'rawSrc', (rawSrc) ->
@@ -178,7 +177,7 @@ class Text extends Asset
   accessed currently leads to undefined behavior.
   ###
   @getter 'text', ->
-    @_text = @_getTextFromRawSrc() unless "_text" of this
+    @_text = @_getTextFromRawSrc() unless '_text' of this
     @_text
 
   @setter 'text', (text) ->
@@ -192,15 +191,21 @@ class Text extends Asset
     super()
 
   _getTextFromRawSrc: ->
-    throw new Error("Text._getTextFromRawSrc(): Asset not loaded: " + @urlOrDescription)  unless @isLoaded
-    throw new Error("Text._getTextFromRawSrc(): No _rawSrc property found: " + @urlOrDescription)  unless @_rawSrc
+    unless @isLoaded
+      throw new Error(
+        "Text._getTextFromRawSrc(): Asset not loaded: #{@urlOrDescription}"
+      )
+    unless @_rawSrc
+      throw new Error(
+        "Text._getTextFromRawSrc(): No _rawSrc property found: #{@urlOrDescription}"
+      )
     if /^utf-?8$/i.test(@encoding)
-      @_rawSrc.toString "utf-8"
+      @_rawSrc.toString 'utf-8'
     else if /^(?:us-?)?ascii$/i.test(@encoding)
-      @_rawSrc.toString "ascii"
+      @_rawSrc.toString 'ascii'
     else if iconv
-      new iconv.Iconv(@encoding, "utf-8").convert(@_rawSrc).toString "utf-8"
+      new iconv.Iconv(@encoding, 'utf-8').convert(@_rawSrc).toString 'utf-8'
     else
-      throw new Error("node-iconv not found. Cannot decode " + this + " (encoding is " + @encoding + "). " + "Please run 'npm install iconv' and try again")
+      throw new Error("node-iconv not found. Cannot decode #{this} (encoding is #{@encoding}). Please run 'npm install iconv' and try again")
 
 module.exports = Text

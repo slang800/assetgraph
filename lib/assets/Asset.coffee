@@ -5,7 +5,7 @@ _ = require 'underscore'
 urlTools = require 'url-tools'
 resolveDataUrl = require '../util/resolveDataUrl'
 passError = require 'passerror'
-setImmediate = process.nextTick if typeof setImmediate is 'undefined'
+setImmediate = process.nextTick unless setImmediate?
 
 urlEndsWithSlashRegExp = /\/(?:[?#].*)?$/
 
@@ -156,11 +156,13 @@ class Asset extends EventEmitter
         @_updateRawSrcAndLastKnownByteLength rawSrc
         if metadata
           if metadata.encoding
-
             # Avoid recoding the asset, just set the encoding.
             @_encoding = metadata.encoding
             delete metadata.encoding
-          _.extend this, metadata # Might change url, contentType and encoding, and could add etag, lastModified, and date
+
+          # Might change url, contentType and encoding, and could add etag,
+          # lastModified, and date
+          _.extend this, metadata
         delete @rawSrcProxy
 
         @emit 'load', this
@@ -331,7 +333,9 @@ class Asset extends EventEmitter
 
   @setter 'url', (url) ->
     unless @isExternalizable
-      throw new Error("#{@toString()} cannot set url of non-externalizable asset")
+      throw new Error(
+        "#{@toString()} cannot set url of non-externalizable asset"
+      )
     oldUrl = @_url
     if url and not /^[a-z\+]+:/.test(url)
       # Non-absolute

@@ -50,7 +50,8 @@ class JavaScript extends Text
           ), this
         @_text = text
         
-        # Temporary workaround for https://github.com/mishoo/UglifyJS2/issues/218
+        # Temporary workaround for
+        # https://github.com/mishoo/UglifyJS2/issues/218
         parseTree.walk new uglifyJs.TreeWalker((node) ->
           node.start._comments_dumped = false  if node.start
           node.end._comments_dumped = false  if node.end

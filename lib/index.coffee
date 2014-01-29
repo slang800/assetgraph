@@ -10,7 +10,7 @@ passError = require 'passerror'
 urlTools = require 'url-tools'
 TransformQueue = require './TransformQueue'
 
-setImmediate = process.nextTick if typeof setImmediate is 'undefined'
+setImmediate = process.nextTick unless setImmediate?
 
 
 class AssetGraph extends EventEmitter
