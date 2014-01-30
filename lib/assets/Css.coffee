@@ -66,7 +66,7 @@ class Css extends Text
             @_parseTree = err.styleSheet
           else
             @_parseTree = cssRules: []
-          @assetGraph.emit 'error', err
+          @assetGraph.emit 'warn', err
         else
           throw err
     @_parseTree
