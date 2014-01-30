@@ -1,10 +1,8 @@
 _ = require 'underscore'
 AssetGraph = require '../'
 uglifyJs = require('./JavaScript').uglifyJs
-uglifyAst = require('./JavaScript').uglifyAst
 errors = require '../errors'
 Asset = require './Asset'
-urlTools = require 'url-tools'
 
 class StaticUrlMap extends Asset
   constructor: (config) ->
