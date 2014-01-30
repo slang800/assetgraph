@@ -234,6 +234,25 @@ class Html extends Text
               )
               node: node
             )
+          else if type is 'text/jsx'
+            src = node.getAttribute 'src'
+            if src
+              if @_isRelationUrl src
+                addOutgoingRelation(new AssetGraph.HtmlJsx(
+                  from: this,
+                  to:
+                    type: 'Jsx'
+                    url: src
+                  node: node
+                ))
+            else
+              addOutgoingRelation(new AssetGraph.HtmlJsx(
+                from: this,
+                to: new AssetGraph.Jsx(
+                  text: node.firstChild.nodeValue
+                )
+                node: node
+              ))
         else if nodeName is 'template'
           traverse = false
           addOutgoingRelation new AssetGraph.HtmlTemplate(
