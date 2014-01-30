@@ -107,6 +107,7 @@ class JavaScript extends Text
     outgoingRelations = []
     syntaxErrors = []
     warnings = []
+    infos = []
     assetGraph = @assetGraph
 
     if assetGraph and assetGraph.requireJsConfig and @incomingRelations.some((incomingRelation) ->
@@ -384,7 +385,7 @@ class JavaScript extends Text
                   outgoingRelation.to = url: outgoingRelation.targetUrl
                   outgoingRelations.push outgoingRelation
               else
-                warnings.push new errors.SyntaxError(
+                infos.push new errors.SyntaxError(
                   "Skipping non-string JavaScriptAmdRequire item: #{node.print_to_string()}"
                 )
             ), this
@@ -490,6 +491,14 @@ class JavaScript extends Text
           @assetGraph.emit 'warn', warning
         else
           console.warn warning.message
+      ), this
+    if infos.length
+      infos.forEach ((info) ->
+        if @assetGraph
+          info.asset = this
+          @assetGraph.emit 'info', info
+        else
+          console.info info.message
       ), this
     return outgoingRelations
 
