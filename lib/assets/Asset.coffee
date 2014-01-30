@@ -557,6 +557,7 @@ class Asset extends EventEmitter
       if @initialComments
         constructorOptions.initialComments = @initialComments
       constructorOptions.quoteChar = @quoteChar if @quoteChar
+      constructorOptions.isRequired = @isRequired
     clone = new @constructor(constructorOptions)
     if not preserveUrl and not @isInline
       clone.url = urlTools.resolveUrl(@url, clone.id + @extension)

@@ -214,7 +214,7 @@ class Html extends Text
                 from: this
                 to:
                   url: url
-
+                  isRequired: true
                 node: node
               )
             if node.hasAttribute('data-almond')

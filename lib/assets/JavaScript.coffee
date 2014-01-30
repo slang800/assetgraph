@@ -21,6 +21,12 @@ class JavaScript extends Text
   supportedExtensions: ['.js']
   isPretty: false
 
+  ###*
+   * true if the asset is part of a RequireJS load graph
+   * @type {Boolean}
+  ###
+  isRequired: false
+
   @getter 'text', ->
     unless '_text' of this
       parseTree = @_parseTree
@@ -382,14 +388,19 @@ class JavaScript extends Text
                     arrayNode: arrayNode
                     node: arrayItemAst
                   )
-                  outgoingRelation.to = url: outgoingRelation.targetUrl
+                  outgoingRelation.to =
+                    url: outgoingRelation.targetUrl
+                    isRequired: true
                   outgoingRelations.push outgoingRelation
               else
                 infos.push new errors.SyntaxError(
                   "Skipping non-string JavaScriptAmdRequire item: #{node.print_to_string()}"
                 )
             ), this
-        else if node.expression instanceof uglifyJs.AST_Symbol and node.expression.name is 'define'
+        else if @isRequired and
+                node.expression instanceof uglifyJs.AST_Symbol and
+                node.expression.name is 'define'
+
           if node.args.length is 2 and node.args[0] instanceof uglifyJs.AST_Array
             arrayNode = node.args[0]
             arrayNode.elements.forEach ((arrayItemAst, i) ->
@@ -403,7 +414,9 @@ class JavaScript extends Text
                     arrayNode: arrayNode
                     node: arrayItemAst
                   )
-                  outgoingRelation.to = url: outgoingRelation.targetUrl
+                  outgoingRelation.to =
+                    url: outgoingRelation.targetUrl
+                    isRequired: true
                   outgoingRelations.push outgoingRelation
               else
                 warnings.push new errors.SyntaxError(
@@ -434,7 +447,9 @@ class JavaScript extends Text
                 from: this
                 node: node
               )
-              outgoingRelation.to = url: outgoingRelation.targetUrl
+              outgoingRelation.to =
+                url: outgoingRelation.targetUrl
+                isRequired: true
               outgoingRelations.push outgoingRelation
           else
             baseUrl = @nonInlineAncestor.url
