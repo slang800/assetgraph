@@ -209,7 +209,19 @@ class Html extends Text
                 @assetGraph.requireJsConfig.registerConfigInJavaScript inlineAsset, this
             if node.hasAttribute('data-main')
               url = node.getAttribute('data-main').replace(/(?:\.js)?($|[\?\#])/, '.js$1')
-              @assetGraph.requireJsConfig.baseUrl = @assetGraph.resolveUrl(@nonInlineAncestor.url, url).replace(/[^\/]*$/, '')  if @assetGraph and @assetGraph.requireJsConfig and not @assetGraph.requireJsConfig.baseUrl
+              if @assetGraph and @assetGraph.requireJsConfig
+                requireJsConfig = @assetGraph.requireJsConfig
+                if requireJsConfig.baseUrl
+                  # baseUrl has already been configured. data-main must take
+                  # this into account.
+                  url = @assetGraph.resolveUrl(requireJsConfig.baseUrl, url)
+                else
+                  # baseUrl is undefined. data-main is an implicit baseUrl
+                  # setter
+                  requireJsConfig.baseUrl = @assetGraph
+                    .resolveUrl(@nonInlineAncestor.url, url)
+                    .replace(/[^\/]*$/, '')
+
               addOutgoingRelation new AssetGraph.HtmlRequireJsMain(
                 from: this
                 to:
