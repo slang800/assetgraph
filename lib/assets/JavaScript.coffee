@@ -3,7 +3,7 @@ uglifyJs = require 'uglify-js-papandreou'
 uglifyAst = require('uglifyast')(uglifyJs)
 errors = require '../errors'
 Text = require './Text'
-urlTools = require 'url-tools'
+urlTools = require 'urltools'
 AssetGraph = require '../'
 
 isNamedDefineNode = (node) ->

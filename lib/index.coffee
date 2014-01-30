@@ -7,7 +7,7 @@ EventEmitter = require('events').EventEmitter
 seq = require 'seq'
 Path = require 'path'
 passError = require 'passerror'
-urlTools = require 'url-tools'
+urlTools = require 'urltools'
 TransformQueue = require './TransformQueue'
 
 setImmediate = process.nextTick unless setImmediate?
