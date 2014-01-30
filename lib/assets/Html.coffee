@@ -253,6 +253,16 @@ class Html extends Text
                 )
                 node: node
               ))
+          else if type is 'application/dart'
+            src = node.getAttribute 'src'
+            if src
+              if @_isRelationUrl src
+                addOutgoingRelation(new AssetGraph.HtmlScript(
+                  from: this
+                  to:
+                    url: "#{src}.js"
+                  node: node
+                ))
         else if nodeName is 'template'
           traverse = false
           addOutgoingRelation new AssetGraph.HtmlTemplate(
