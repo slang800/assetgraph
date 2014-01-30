@@ -30,7 +30,7 @@ class SrcSet extends Text
 
         else
           warning = new errors.SyntaxError(
-            message: "SrcSet: Could not parse entry: #{entry}"
+            message: "SrcSet: Could not parse entry: #{entryStr}"
             asset: this
           )
           if @assetGraph
