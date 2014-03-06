@@ -55,7 +55,6 @@
   "main": "lib",
   "scripts": {
     "test": "vows",
-    "travis": "vows --spec",
-    "prepublish": "npm test"
+    "travis": "vows --spec"
   }
 }
