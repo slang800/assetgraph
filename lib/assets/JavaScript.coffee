@@ -124,14 +124,16 @@ class JavaScript extends Text
     infos = []
     assetGraph = @assetGraph
 
-    if assetGraph and assetGraph.requireJsConfig and @incomingRelations.some((incomingRelation) ->
-      /^JavaScript(?:ShimRequire|Amd(?:Define|Require))$/.test incomingRelation.type
-    )
-      moduleName = assetGraph.requireJsConfig.getModuleName(this, new AssetGraph.JavaScriptShimRequire( # Argh!
-        from: this
-        href: "bogus"
-      ).baseAsset.nonInlineAncestor.url)
-      shimConfig = assetGraph.requireJsConfig.shim[moduleName]
+    # Register any shim dependencies as outgoign relations
+    if assetGraph and assetGraph.requireJsConfig
+      moduleName = undefined
+      shimConfig = undefined
+      @incomingRelations.some (rel) ->
+        if (/^JavaScript(?:ShimRequire|Amd(?:Define|Require))$/).test(rel.type) and rel.rawHref
+          moduleName = rel.rawHref
+          shimConfig = assetGraph.requireJsConfig.shim[moduleName]
+          return true
+
       if shimConfig and shimConfig.deps
         assetGraph.requireJsConfig.shim[moduleName].deps.forEach ((shimModuleName) ->
           outgoingRelation = new AssetGraph.JavaScriptShimRequire(
