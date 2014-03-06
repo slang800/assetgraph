@@ -342,11 +342,16 @@ class Html extends Text
                 )
             else if /import/i.test(rel)
               if @_isRelationUrl(node.getAttribute('href'))
-                assetConfig = url: node.getAttribute('href')
-                assetConfig.contentType = node.getAttribute('type') or 'text/html'  if node.hasAttribute('type')
+                # HtmlImport specification:
+                # http://w3c.github.io/webcomponents/spec/imports/
                 addOutgoingRelation new AssetGraph.HtmlImport(
                   from: this
-                  to: assetConfig
+                  to:
+                    url: node.getAttribute('href')
+                    type: 'Html'
+                    # Web Compoonents are explicitly not to be treated as HTML
+                    # fragments Override automated isFragment resolving here
+                    isFragment: false
                   node: node
                 )
         else if nodeName is 'meta' and node.getAttribute('name') is 'msapplication-TileImage'
