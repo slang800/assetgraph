@@ -187,6 +187,12 @@ class JavaScript extends Text
           ), this
       ), this
 
+      # Detect global 'use strict' directives
+      if parentNode is this.parseTree and
+         node instanceof uglifyJs.AST_Directive and
+         node.value is 'use strict'
+        @strict = true
+
       if node instanceof uglifyJs.AST_Call
         parentParentNode = stack[stack.length - 3]
         if node.expression instanceof uglifyJs.AST_Dot and
