@@ -38,14 +38,14 @@ class Html extends Text
     super(config)
 
   contentType: 'text/html'
-  
+
   supportedExtensions: ['.html', '.template', '.xhtml', '.shtml', '.ko']
-  
+
   isPretty: false
-  
+
   @getter 'encoding', ->
     unless @_encoding
-      
+
       # An explicit encoding (Content-Type header, data: url charset,
       # assetConfig) takes precedence, but if absent we should look for a
       # <meta http-equiv='Content-Type' ...> tag with a charset before falling
@@ -59,7 +59,6 @@ class Html extends Text
     @_encoding
 
   @setter 'encoding', (encoding) ->
-    
     # An intended side effect of getting this.parseTree before deleting
     # this._rawSrc is that we're sure that the raw source has been decoded
     # into this._text before the original encoding is thrown away.
@@ -84,7 +83,6 @@ class Html extends Text
           contentTypeMetaElement.setAttribute 'content', "text/html; charset=#{encoding}"
           @markDirty()
       else
-        
         # Simple <meta charset="...">
         if contentTypeMetaElement.getAttribute('charset') isnt encoding
           contentTypeMetaElement.setAttribute 'charset', encoding
@@ -120,7 +118,7 @@ class Html extends Text
           @assetGraph.emit "error", err
         else
           throw err
-      
+
       # Jsdom (or its Html parser) doesn't strip the newline after the
       # <!DOCTYPE> for some reason. Issue reported here:
       # https://github.com/tmpvar/jsdom/issues/160
@@ -200,7 +198,7 @@ class Html extends Text
                 to: inlineAsset
                 node: node
               )
-              
+
               # Hack: If transforms.registerRequireJsConfig has run, make sure
               # that we register the require.js paths in the inline script
               # before resolving the a data-main attribute further down in the
@@ -209,18 +207,11 @@ class Html extends Text
                 @assetGraph.requireJsConfig.registerConfigInJavaScript inlineAsset, this
             if node.hasAttribute('data-main')
               url = node.getAttribute('data-main').replace(/(?:\.js)?($|[\?\#])/, '.js$1')
-              if @assetGraph and @assetGraph.requireJsConfig
-                requireJsConfig = @assetGraph.requireJsConfig
-                if requireJsConfig.baseUrl
-                  # baseUrl has already been configured. data-main must take
-                  # this into account.
-                  url = @assetGraph.resolveUrl(requireJsConfig.baseUrl, url)
-                else
-                  # baseUrl is undefined. data-main is an implicit baseUrl
-                  # setter
-                  requireJsConfig.baseUrl = @assetGraph
-                    .resolveUrl(@nonInlineAncestor.url, url)
-                    .replace(/[^\/]*$/, '')
+
+              if @assetGraph and @assetGraph.requireJsConfig and not @assetGraph.requireJsConfig.baseUrl
+                @assetGraph.requireJsConfig.baseUrl = @assetGraph
+                  .resolveUrl(@nonInlineAncestor.url, url)
+                  .replace(/[^\/]*$/, '')
 
               addOutgoingRelation new AssetGraph.HtmlRequireJsMain(
                 from: this
@@ -550,7 +541,6 @@ class Html extends Text
               node: node
             )
       else if node.nodeType is node.COMMENT_NODE
-        
         # <!--[if !IE]> --> ... <!-- <![endif]-->
         # <!--[if IE gte 8]><!--> ... <!--<![endif]--> (evaluated by certain IE versions and all non-IE browsers)
         matchNonInternetExplorerConditionalComment = node.nodeValue.match(/^\[if\s*([^\]]*)\]>\s*(?:<!)?$/)
@@ -569,7 +559,6 @@ class Html extends Text
             else
               console.warn @toString() + ': ' + warning.message
         else
-          
           # <!--[if ...]> .... <![endif]-->
           matchConditionalComment = node.nodeValue.match(/^\[if\s*([^\]]*)\]\>([\s\S]*)<!\[endif\]$/)
           if matchConditionalComment
