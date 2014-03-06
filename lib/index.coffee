@@ -1,3 +1,4 @@
+require 'setimmediate'
 util = require 'util'
 fs = require 'fs'
 os = require 'os'
@@ -9,8 +10,6 @@ Path = require 'path'
 passError = require 'passerror'
 urlTools = require 'urltools'
 TransformQueue = require './TransformQueue'
-
-setImmediate = process.nextTick unless setImmediate?
 
 
 class AssetGraph extends EventEmitter
@@ -37,7 +36,7 @@ class AssetGraph extends EventEmitter
     return new AssetGraph(options) unless this instanceof AssetGraph
     super()
     _.extend this, options
-    
+
     # this.root might be undefined, in which case urlTools.urlOrFsPathToUrl
     # will use process.cwd()
     @root = urlTools.urlOrFsPathToUrl(@root, true) # ensureTrailingSlash
@@ -113,7 +112,7 @@ class AssetGraph extends EventEmitter
     , true)
     asset._outgoingRelations.forEach ((outgoingRelation) ->
       @removeRelation outgoingRelation
-      
+
       # Remove inline asset
       if outgoingRelation.to.isAsset and outgoingRelation.to.isInline
         @removeAsset outgoingRelation.to
@@ -318,7 +317,7 @@ class AssetGraph extends EventEmitter
       # report back
       if assetConfig.some(_.isArray)
         throw new Error('AssetGraph.resolveAssetConfig: Multidimensional array not supported.')
-      
+
       that = this
       return seq(assetConfig).parMap((_assetConfig) ->
         callback = this
@@ -334,15 +333,13 @@ class AssetGraph extends EventEmitter
       )['catch'](cb)
     if typeof assetConfig is 'string'
       if /^[\w\+]+:/.test(assetConfig)
-        
         # Includes protocol, assume url
         assetConfig = url: assetConfig
       else
-        
         # File system path
         assetConfig = url: encodeURI(assetConfig)
+
     if assetConfig.isAsset or assetConfig.isResolved
-      
       # Almost done, add .type property if possible (this is all we can do
       # without actually fetching the asset):
       assetConfig.type = assetConfig.type or (assetConfig.contentType and AssetGraph.lookupContentType(assetConfig.contentType)) or AssetGraph.typeByExtension[Path.extname(assetConfig.url.replace(/[\?\#].*$/, '')).toLowerCase()]
@@ -400,7 +397,6 @@ class AssetGraph extends EventEmitter
         newExtension = Path.extname(assetConfig.url.replace(/[\?\#].*$/, '')).toLowerCase()
         return foundType(AssetGraph.typeByExtension[newExtension]) if newExtension of AssetGraph.typeByExtension
       if metadata and metadata.contentType
-        
         # If the asset was served using HTTP, we shouldn't try to second guess
         # by sniffing.
         foundType AssetGraph.lookupContentType(metadata.contentType)
@@ -414,7 +410,7 @@ class AssetGraph extends EventEmitter
           '-'
         ])
         fileOutput = ''
-        
+
         # The 'file' utility might close its stdin as soon as it has figured
         # out the content type:
         fileProcess.stdin.on 'error', ->

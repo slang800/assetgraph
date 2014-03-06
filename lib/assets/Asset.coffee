@@ -5,7 +5,6 @@ _ = require 'underscore'
 urlTools = require 'urltools'
 resolveDataUrl = require '../util/resolveDataUrl'
 passError = require 'passerror'
-setImmediate = process.nextTick unless setImmediate?
 
 urlEndsWithSlashRegExp = /\/(?:[?#].*)?$/
 

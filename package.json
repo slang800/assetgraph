@@ -33,7 +33,8 @@
     "urltools": "=0.1.0",
     "xmldom": "=0.1.16",
     "mkdirp": "=0.3.5",
-    "imageinfo": "=1.0.4"
+    "imageinfo": "=1.0.4",
+    "setimmediate": "~1.0.1"
   },
   "devDependencies": {
     "onedox": "~0.0.1",
