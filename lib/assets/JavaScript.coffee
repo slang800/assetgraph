@@ -27,12 +27,20 @@ class JavaScript extends Text
   ###
   isRequired: false
 
+  ###*
+   * Boolean indicating if the asset has a global "use strict"; statement
+     Useful for wrapping the asset in an IIFE when concatenating in order to
+     avoid leakage
+   * @type {Boolean}
+  ###
+  strict: false
+
   @getter 'text', ->
     unless '_text' of this
       parseTree = @_parseTree
       if parseTree
         outputStream = uglifyJs.OutputStream(
-          
+
           # Preserve all comments when isPretty is true, and only preserve
           # copyright notices/license info when it's false:
           comments: @isPretty or shouldCommentNodeBePreservedInNonPrettyPrintedOutput
@@ -45,7 +53,7 @@ class JavaScript extends Text
 
         # Always end with a semicolon like the UglifyJS binary
         text = text.replace(/;*$/, ';')
-        
+
         # Workaround for https://github.com/mishoo/UglifyJS2/issues/180
         if parseTree.end and parseTree.end.comments_before and not parseTree.end._comments_dumped
           parseTree.end.comments_before.forEach ((comment) ->
@@ -55,7 +63,7 @@ class JavaScript extends Text
               else text += '/*' + comment.value + '*/'  if comment.type is 'comment2'
           ), this
         @_text = text
-        
+
         # Temporary workaround for
         # https://github.com/mishoo/UglifyJS2/issues/218
         parseTree.walk new uglifyJs.TreeWalker((node) ->
@@ -69,7 +77,7 @@ class JavaScript extends Text
   @getter 'parseTree', ->
     unless @_parseTree
       text = @text
-      
+
       # If the source ends with one or more comment, add an empty statement
       # at the end so there's a token for the UglifyJS parser to attach them
       # to (workaround for https://github.com/mishoo/UglifyJS2/issues/180)
@@ -249,7 +257,7 @@ class JavaScript extends Text
                argumentNodes[0].elements[0] instanceof uglifyJs.AST_String and
                argumentNodes[0].elements[0].value is '$templateCache' and
                argumentNodes[0].elements[1] instanceof uglifyJs.AST_Function
-              
+
               templateCacheVariableName = argumentNodes[0].elements[1].argnames[0].name
             diveIntoAngularMethodCall argumentNodes, templateCacheVariableName
             stackPosition -= 2
