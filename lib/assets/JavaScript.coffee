@@ -467,7 +467,7 @@ class JavaScript extends Text
                 url: outgoingRelation.targetUrl
                 isRequired: true
               outgoingRelations.push outgoingRelation
-          else
+          else if not @isRequired
             baseUrl = @nonInlineAncestor.url
             if /^file:/.test(baseUrl)
               Module = require('module')
