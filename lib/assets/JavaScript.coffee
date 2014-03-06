@@ -52,7 +52,7 @@ class JavaScript extends Text
         text = outputStream.get()
 
         # Always end with a semicolon like the UglifyJS binary
-        text = text.replace(/;*$/, ';')
+        if text.length > 0 then text = text.replace(/;*$/, ';')
 
         # Workaround for https://github.com/mishoo/UglifyJS2/issues/180
         if parseTree.end and parseTree.end.comments_before and not parseTree.end._comments_dumped
