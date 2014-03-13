@@ -6,41 +6,33 @@ iconv = undefined
 try
   iconv = require 'iconv'
 
-###
-new Text(options)
-=================
-
-Create a new Text asset instance.
-
-Adds text encoding and decoding support to Asset. Serves as a
-superclass for `Html`, `Xml`, `Css`, `JavaScript`, `CoffeeScript`,
-`Json`, and `CacheManifest`.
-
-In addition to the options already supported by the Asset base
-class, these options are supported:
-
-- `text` (String) The decoded source of the asset. Can be used
-instead of `rawSrc` and `rawSrcProxy`.  - `encoding`
-(String) Used to decode and reencode the `rawSrc`. Can
-be any encoding supported by the `iconv` module. Can
-be changed later using the `encoding`
-getter/setter. Defaults to "utf-8" (see the docs for
-`defaultEncoding` below). If the asset is loaded via
-http, the encoding will be read from the
-`Content-Type`, and likewise for `data:` urls.
-
-Example:
-
-var textAsset = new Text({
-// "æøå" in iso-8859-1:
-rawSrc: new Buffer([0xe6, 0xf8, 0xe5]),
-encoding: "iso-8859-1"
-});
-textAsset.text; // "æøå" (decoded JavaScript string)
-textAsset.encoding = 'utf-8';
-textAsset.rawSrc; // <Buffer c3 a6 c3 b8 c3 a5>
+###*
+ * Adds text encoding and decoding support to Asset. Serves as a superclass
+   for `Html`, `Xml`, `Css`, `JavaScript`, `CoffeeScript`, `Json`, and
+   `CacheManifest`.
 ###
 class Text extends Asset
+  ###*
+   * In addition to the options already supported by the Asset base class,
+     these options are supported:
+   * @param  {String} config.text The decoded source of the asset. Can be used
+     instead of `rawSrc` and `rawSrcProxy`.
+   * @param  {String} config.encoding Used to decode and reencode the
+     `rawSrc`. Can be any encoding supported by the `iconv` module. Can be
+     changed later using the `encoding` getter/setter. Defaults to "utf-8"
+     (see the docs for `defaultEncoding` below). If the asset is loaded via
+     http, the encoding will be read from the `Content-Type`, and likewise for
+     `data:` urls.
+   * @example
+   * var textAsset = new Text({
+   * // "æøå" in iso-8859-1:
+   * rawSrc: new Buffer([0xe6, 0xf8, 0xe5]),
+   * encoding: "iso-8859-1"
+   * });
+   * textAsset.text; // "æøå" (decoded JavaScript string)
+   * textAsset.encoding = 'utf-8';
+   * textAsset.rawSrc; // <Buffer c3 a6 c3 b8 c3 a5>
+  ###
   constructor: (config) ->
     if 'text' of config
       @_text = config.text
@@ -50,28 +42,21 @@ class Text extends Asset
       delete config.encoding
     super config
 
+  ###*
+   * Property that's true for all Text instances. Avoids reliance on the
+     `instanceof` operator.
   ###
-  text.isText
-  ===========
+  isText: true
 
-  Property that's true for all Text instances. Avoids reliance on
-  the `instanceof` operator.
-  ###
-
-  ###
-  text.defaultEncoding
-  ====================
-
-  The default encoding for the Text (sub)class. Used for decoding
-  the raw source when the encoding cannot be determined by other
-  means, such as a `Content-Type` header (when the asset was
-  fetched via http), or another indicator specific to the given
-  asset type (`@charset` for Css, `<meta
-  http-equiv="Content-Type" ...>` for Html).
-
-  Factory setting is "utf-8", but you can override it by setting
-  `Text.prototype.defaultEncoding` to another value supported by
-  the `iconv` module.
+  ###*
+   * The default encoding for the Text (sub)class. Used for decoding the raw
+     source when the encoding cannot be determined by other means, such as a
+     `Content-Type` header (when the asset was fetched via http), or another
+     indicator specific to the given asset type (`@charset` for Css, `<meta
+     http-equiv="Content-Type" ...>` for Html).
+   * Factory setting is "utf-8", but you can override it by setting
+     `Text.prototype.defaultEncoding` to another value supported by the
+     `iconv` module.
   ###
   defaultEncoding: 'utf-8'
 
@@ -88,14 +73,10 @@ class Text extends Asset
 
   contentType: 'text/plain'
 
-  ###
-  Text.encoding (getter/setter)
-  =============================
-
-  Get or set the encoding (charset) used for re-encoding the raw
-  source of the asset. To affect the initial decoding of the
-  `rawSrc` option, provide the `encoding` option to the
-  constructor.
+  ###*
+  * Get or set the encoding (charset) used for re-encoding the raw source of
+    the asset. To affect the initial decoding of the `rawSrc` option, provide
+    the `encoding` option to the constructor.
   ###
   @getter 'encoding', ->
     @_encoding = @defaultEncoding  unless @_encoding
@@ -144,37 +125,31 @@ class Text extends Asset
     assetGraph.addAsset this  if assetGraph
     @markDirty()
 
-  ###
-  text.text (getter/setter)
-  =========================
+  ###*
+   * Get or set the decoded text contents of the of the asset as a JavaScript
+     string. Unlike browsers AssetGraph doesn't try to sniff the charset of
+     your text-based assets. It will fall back to assuming utf-8 if it's
+     unable to determine the encoding/charset from HTTP headers, `<meta http-
+     equiv='Content-Type'>` tags (Html), `@charset` (Css), so if for some
+     reason you're not using utf-8 for all your text-based assets, make sure
+     to provide those hints. Other asset types provide no standard way to
+     specify the charset within the file itself, so presently there's no way
+     to load eg. JavaScript from disc if it's not utf-8 or ASCII, except by
+     overriding `Text.prototype.defaultEncoding` globally.
+   * If the internal state has been changed since the asset was initialized,
+     it will automatically be reserialized when the `text` property is
+     retrieved, for example:
+   * var htmlAsset = new Html({
+   *   rawSrc: new Buffer("<body>hello</body>");
+   * });
+   * htmlAsset.text; // "<body>hello</body>"
+   * htmlAsset.parseTree.body.innerHTML = "bye";
+   * htmlAsset.markDirty();
+   * htmlAsset.text; // "<body>bye</body>"
 
-  Get or set the decoded text contents of the of the asset as a
-  JavaScript string. Unlike browsers AssetGraph doesn't try to
-  sniff the charset of your text-based assets. It will fall back
-  to assuming utf-8 if it's unable to determine the
-  encoding/charset from HTTP headers, `<meta
-  http-equiv='Content-Type'>` tags (Html), `@charset` (Css), so
-  if for some reason you're not using utf-8 for all your
-  text-based assets, make sure to provide those hints. Other
-  asset types provide no standard way to specify the charset
-  within the file itself, so presently there's no way to load
-  eg. JavaScript from disc if it's not utf-8 or ASCII, except by
-  overriding `Text.prototype.defaultEncoding` globally.
-
-  If the internal state has been changed since the asset was
-  initialized, it will automatically be reserialized when the
-  `text` property is retrieved, for example:
-
-  var htmlAsset = new Html({
-  rawSrc: new Buffer("<body>hello</body>");
-  });
-  htmlAsset.text; // "<body>hello</body>"
-  htmlAsset.parseTree.body.innerHTML = "bye";
-  htmlAsset.markDirty();
-  htmlAsset.text; // "<body>bye</body>"
-
-  Setting this property after the outgoing relations have been
-  accessed currently leads to undefined behavior.
+   * Setting this property after the outgoing relations have been accessed
+     currently leads to undefined behavior.
+   * @return {[type]}
   ###
   @getter 'text', ->
     @_text = @_getTextFromRawSrc() unless '_text' of this
