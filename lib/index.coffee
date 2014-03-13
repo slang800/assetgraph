@@ -534,16 +534,22 @@ AssetGraph.query = AssetGraph::query = require('./query')
 AssetGraph::if_ = AssetGraph::if
 
 AssetGraph.transforms = {}
-AssetGraph.registerTransform = (fileNameOrFunction, name) ->
-  if typeof fileNameOrFunction is 'function'
-    name = name or fileNameOrFunction.name
-    AssetGraph.transforms[name] = fileNameOrFunction
+AssetGraph.registerTransform = (fileOrFn, name) ->
+  if name?
+    # name is already provided explicitly
+  else if typeof fileOrFn is 'function'
+    # it's a function
+    name = fileOrFn.name
+    AssetGraph.transforms[name] = fileOrFn
   else
-    # File name
-    name = name or Path.basename(fileNameOrFunction, '.js')
-    fileNameOrFunction = Path.resolve(process.cwd(), fileNameOrFunction) # Absolutify if not already absolute
+    # it's a file name
+    name = Path.basename(fileOrFn, Path.extname(fileOrFn))
+
+    # Absolutify if not already absolute
+    fileOrFn = Path.resolve(process.cwd(), fileOrFn)
+
     AssetGraph.transforms.__defineGetter__ name, ->
-      require fileNameOrFunction
+      require fileOrFn
 
   TransformQueue::[name] = ->
     if not @conditions.length or @conditions[@conditions.length - 1]
