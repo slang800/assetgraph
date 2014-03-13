@@ -64,7 +64,7 @@ class CacheManifest extends Text
               node.tokens.join " "
           ).join("\n") + "\n"
         @_text = "CACHE MANIFEST\n"
-        
+
         # The heading for the CACHE section can be omitted if it's the first
         # thing in the manifest, so put it first if there is one.
         @_text += getSectionText(@_parseTree.CACHE)  if @_parseTree.CACHE
@@ -77,14 +77,13 @@ class CacheManifest extends Text
 
   findOutgoingRelationsInParseTree: ->
     outgoingRelations = []
-    
+
     # Traverse the sections in alphabetical order so the order of the relations is predictable
     Object.keys(@parseTree).sort().forEach ((sectionName) ->
       nodes = @parseTree[sectionName]
       if sectionName isnt "NETWORK"
         nodes.forEach ((node) ->
           if node.tokens
-            
             # In the CACHE section there's only one token per entry, in FALLBACK
             # there's the online URL followed by the offline URL (the one we want).
             # Just pick the last token as the url.
@@ -92,7 +91,6 @@ class CacheManifest extends Text
               from: this
               to:
                 url: node.tokens[node.tokens.length - 1]
-
               node: node
               sectionName: sectionName
             )
