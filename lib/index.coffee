@@ -410,8 +410,11 @@ class AssetGraph extends EventEmitter
         ])
         fileOutput = ''
 
-        # The 'file' utility might close its stdin as soon as it has figured
-        # out the content type:
+        fileProcess.on 'error', (err) =>
+          @emit 'warn', "Could not determine asset type from contents using the file command: #{err.stack}"
+
+        # The 'file' utility might close its stdin as soon as it has figured out
+        # the content type:
         fileProcess.stdin.on 'error', ->
 
         fileProcess.stdout.on('data', (chunk) ->
