@@ -591,20 +591,19 @@ class Asset extends EventEmitter
    * @readOnly
   ###
   @getter 'urlOrDescription', ->
-    makeRelativeToAssetGraphRootUrlIfPossible = (url) ->
-      if rootUrl and url.indexOf(rootUrl) is 0
-        "/#{url.substr(rootUrl.length)}"
+    makeRelativeToCwdIfPossible = (url) ->
+      if /^file:\/\//.test(url)
+        return path.relative(process.cwd(), urlTools.fileUrlToFsPath(url))
       else
         url
 
-    rootUrl = @assetGraph and @assetGraph.root
     if @url
-      makeRelativeToAssetGraphRootUrlIfPossible(@url)
+      makeRelativeToCwdIfPossible(@url)
     else
       "inline #{@type}#{
         if @nonInlineAncestor
           " in #{
-            makeRelativeToAssetGraphRootUrlIfPossible(@nonInlineAncestor.url)
+            makeRelativeToCwdIfPossible(@nonInlineAncestor.url)
           }"
         else
           ''
