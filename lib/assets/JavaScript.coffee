@@ -437,7 +437,7 @@ class JavaScript extends Text
                     isRequired: true
                   outgoingRelations.push outgoingRelation
               else
-                warnings.push new errors.SyntaxError(
+                infos.push new errors.SyntaxError(
                   "Skipping non-string JavaScriptAmdDefine item: #{node.print_to_string()}"
                 )
             ), this
