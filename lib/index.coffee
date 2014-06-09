@@ -9,6 +9,7 @@ seq = require 'seq'
 Path = require 'path'
 passError = require 'passerror'
 urlTools = require 'urltools'
+normalizeUrl = require 'normalizeurl'
 TransformQueue = require './TransformQueue'
 
 
@@ -35,9 +36,9 @@ class AssetGraph extends EventEmitter
     super()
     _.extend this, options
 
-    # this.root might be undefined, in which case urlTools.urlOrFsPathToUrl
-    # will use process.cwd()
-    @root = urlTools.urlOrFsPathToUrl(@root, true) # ensureTrailingSlash
+    # this.root might be undefined, in which case urlTools.urlOrFsPathToUrl will
+    # use process.cwd(). Also ensureTrailingSlash
+    @root = normalizeUrl(urlTools.urlOrFsPathToUrl(@root, true))
     @_assets = []
     @_relations = []
     @_objInBaseAssetPaths = {}
