@@ -103,7 +103,9 @@ class Html extends Text
     unless @_parseTree
       text = @text
       try
-        @_parseTree = jsdom.jsdom(text, `undefined`,
+        # Compensate for jsdom 0.10.2+ creating
+        # <html><head></head><body>...</body> around the document if text === ''
+        @_parseTree = jsdom.jsdom(text or ' ', undefined,
           features:
             ProcessExternalResources: []
             FetchExternalResources: []
@@ -118,6 +120,10 @@ class Html extends Text
           @assetGraph.emit "error", err
         else
           throw err
+
+      if not text
+        # Remove the sole text node caused by the text === '' hack above:
+        @_parseTree.removeChild(this._parseTree.firstChild);
 
       # Jsdom (or its Html parser) doesn't strip the newline after the
       # <!DOCTYPE> for some reason. Issue reported here:
