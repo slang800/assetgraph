@@ -12,7 +12,7 @@ class Json extends Text
         @_parseTree = JSON.parse(@text)
       catch e
         err = new errors.ParseError(
-          message: "Json parse error in #{@url or "(inline)"}: #{e.message}"
+          message: "Json parse error in #{@urlOrDescription}: #{e.message}"
           asset: this
         )
         if @assetGraph

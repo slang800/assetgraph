@@ -141,7 +141,7 @@ class Html extends Text
         )
       catch e
         err = new errors.ParseError(
-          message: "Parse error in #{@url or "inline Html#{if @nonInlineAncestor then " in #{@nonInlineAncestor.url}" else ''}"}\n" + e.message
+          message: "Parse error in #{@urlOrDescription}\n" + e.message
           asset: this
         )
         if @assetGraph
