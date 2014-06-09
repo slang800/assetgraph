@@ -2,6 +2,7 @@ _ = require 'underscore'
 uglifyJs = require 'uglify-js-papandreou'
 uglifyAst = require('uglifyast')(uglifyJs)
 errors = require '../errors'
+resolveCommonJsModuleName = require '../resolveCommonJsModuleName'
 Text = require './Text'
 urlTools = require 'urltools'
 AssetGraph = require '../'
@@ -354,7 +355,7 @@ class JavaScript extends Text
               asset: this
             )
         else if node.expression instanceof uglifyJs.AST_Symbol and
-                (node.expression.name is 'require' or node.expression.name is 'requirejs') and 
+                (node.expression.name is 'require' or node.expression.name is 'requirejs') and
                 ((node.args.length is 2 and node.args[1] instanceof uglifyJs.AST_Function) or node.args.length is 1) and
                 node.args[0] instanceof uglifyJs.AST_Array
 
@@ -470,33 +471,23 @@ class JavaScript extends Text
           else if not @isRequired
             baseUrl = @nonInlineAncestor.url
             if /^file:/.test(baseUrl)
-              Module = require('module')
-              path = require('path')
-              fileName = urlTools.fileUrlToFsPath(baseUrl)
-              fakeModule = new Module(fileName)
-              resolvedFileName = undefined
-              fakeModule.filename = fileName
-              fakeModule.paths = Module._nodeModulePaths(
-                path.dirname(fakeModule.filename)
+              resolvedCommonJsModuleName = resolveCommonJsModuleName(
+                urlTools.fileUrlToFsPath(baseUrl)
+                node.args[0].value
               )
-              try
-                resolvedFileName = Module._resolveFilename(
-                  node.args[0].value, fakeModule
-                )
-                if Array.isArray(resolvedFileName)
-                  resolvedFileName = resolvedFileName[0] # Node 0.4?
-              catch e
+              # Skip built-in and unresolvable modules (they just resolve to
+              # 'fs', 'util', etc., not a file name):
+              unless resolvedCommonJsModuleName
                 warnings.push new errors.SyntaxError(
                   message: "Couldn't resolve #{node.print_to_string()}, skipping"
                   relationType: 'JavaScriptCommonJsRequire'
                 )
-              # Skip built-in and unresolvable modules (they just resolve to
-              # 'fs', 'util', etc., not a file name):
-              if /^\//.test(resolvedFileName)
+              else if /^\//.test(resolvedCommonJsModuleName)
                 outgoingRelations.push new AssetGraph.JavaScriptCommonJsRequire(
                   from: this
                   to:
-                    url: urlTools.fsFilePathToFileUrl(resolvedFileName)
+                    url: urlTools.fsFilePathToFileUrl(resolvedCommonJsModuleName)
+
                   node: node
                 )
             else
