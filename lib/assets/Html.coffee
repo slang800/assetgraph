@@ -130,10 +130,13 @@ class Html extends Text
   @getter 'parseTree', ->
     unless @_parseTree
       text = @internalText
+      isEmpty = /^\s*$/.test(text)
       try
         # Compensate for jsdom 0.10.2+ creating
         # <html><head></head><body>...</body> around the document if text === ''
-        @_parseTree = jsdom.jsdom(text or ' ', undefined,
+        @_parseTree = jsdom.jsdom(
+          (if isEmpty then '<span></span>' else text)
+          undefined
           features:
             ProcessExternalResources: []
             FetchExternalResources: []
@@ -149,7 +152,7 @@ class Html extends Text
         else
           throw err
 
-      if not text
+      if isEmpty
         # Remove the sole text node caused by the text === '' hack above:
         @_parseTree.removeChild(this._parseTree.firstChild);
 
