@@ -96,6 +96,7 @@ class JavaScript extends Text
           @assetGraph.emit 'warn', err
         else
           throw err
+        @_parseTree = uglifyJs.parse('')
     @_parseTree
 
   @setter 'parseTree', (parseTree) ->
