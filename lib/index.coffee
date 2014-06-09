@@ -509,11 +509,14 @@ AssetGraph.lookupContentType = AssetGraph::lookupContentType = (contentType) ->
     if contentType of AssetGraph.typeByContentType
       AssetGraph.typeByContentType[contentType]
     else if /\+xml$/i.test(contentType)
-      "Xml"
+      contentTypeWithoutXmlSuffix = contentType.replace(/\+xml$/i, '')
+      AssetGraph.typeByContentType[contentTypeWithoutXmlSuffix] or 'Xml'
+    else if ("#{contentType}+xml") of AssetGraph.typeByContentType
+      AssetGraph.typeByContentType["#{contentType}+xml"]
     else if /^text\//i.test(contentType)
-      "Text"
+      'Text'
     else
-      "Asset"
+      'Asset'
 
 AssetGraph.createAsset = AssetGraph::createAsset = (assetConfig) ->
   unless assetConfig.type
@@ -608,4 +611,3 @@ fs.readdirSync(Path.resolve(__dirname, 'assets')).forEach (fileName) ->
 fs.readdirSync(Path.resolve(__dirname, 'relations')).forEach (fileName) ->
   if /\.(js|coffee)$/.test(fileName) and fileName not in ['index.js', 'index.coffee']
     AssetGraph.registerRelation Path.resolve(__dirname, 'relations', fileName)
-
