@@ -93,7 +93,7 @@ class JavaScript extends Text
           asset: this
         )
         if @assetGraph
-          @assetGraph.emit 'error', err
+          @assetGraph.emit 'warn', err
         else
           throw err
     @_parseTree
@@ -502,7 +502,7 @@ class JavaScript extends Text
       if @assetGraph
         syntaxErrors.forEach ((syntaxError) ->
           syntaxError.asset = this
-          @assetGraph.emit 'error', syntaxError
+          @assetGraph.emit 'warn', syntaxError
         ), this
       else
         throw new Error(_.pluck(errors, 'message').join('\n'))

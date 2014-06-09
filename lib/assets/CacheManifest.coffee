@@ -42,7 +42,7 @@ class CacheManifest extends Text
       if syntaxErrors.length > 0
         if @assetGraph
           syntaxErrors.forEach ((syntaxError) ->
-            @assetGraph.emit "error", syntaxError
+            @assetGraph.emit 'warn', syntaxError
           ), this
         else
           throw new Error(_.pluck(syntaxErrors, "message").join("\n"))

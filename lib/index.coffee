@@ -323,7 +323,7 @@ class AssetGraph extends EventEmitter
         callback = this
         that.resolveAssetConfig _assetConfig, fromUrl, (err, _resolvedAssetConfigs) ->
           if err
-            that.emit 'error', err
+            that.emit 'warn', err
             callback null, []
           else
             callback null, _resolvedAssetConfigs

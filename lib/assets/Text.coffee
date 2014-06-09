@@ -106,7 +106,7 @@ class Text extends Asset
               if err.code is 'EILSEQ'
                 err.message += '\nTransliterating and ignoring further failures. Data corruption may occur.'
                 @_updateRawSrcAndLastKnownByteLength new iconv.Iconv('utf-8', "#{@encoding }//TRANSLIT//IGNORE").convert(@text)
-              @assetGraph.emit "error", err
+              @assetGraph.emit 'warn', err
             else
               throw err
         else

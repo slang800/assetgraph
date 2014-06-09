@@ -263,7 +263,7 @@ class Asset extends EventEmitter
     unless @_rawSrc
       err = new Error("Asset.rawSrc getter: Asset isn't loaded: #{@}")
       if @assetGraph
-        @assetGraph.emit 'error', err
+        @assetGraph.emit 'warn', err
       else
         throw err
     @_rawSrc

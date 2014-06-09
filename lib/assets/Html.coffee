@@ -145,7 +145,7 @@ class Html extends Text
           asset: this
         )
         if @assetGraph
-          @assetGraph.emit "error", err
+          @assetGraph.emit 'warn', err
         else
           throw err
 

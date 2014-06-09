@@ -36,7 +36,7 @@ class TransformQueue
           if cb
             cb err
           else
-            that.assetGraph.emit "error", err
+            that.assetGraph.emit 'warn', err
         else
           that.run cb
         return
