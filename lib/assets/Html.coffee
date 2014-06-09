@@ -35,6 +35,10 @@ class Html extends Text
     if 'isFragment' of config
       @_isFragment = config.isFragment
       delete config.isFragment
+
+    @_templateReplacements = {}
+    config.text = @_replaceTemplates(config.text) if 'text' of config
+
     super(config)
 
   contentType: 'text/html'
@@ -91,17 +95,41 @@ class Html extends Text
       @_encoding = encoding
       @markDirty()
 
+  unload: ->
+    super()
+    @_templateReplacements = {}
+
   @getter 'text', ->
+    Object.keys(@_templateReplacements).reduce ((text, key) =>
+      text.replace key, @_templateReplacements[key]
+    ), @internalText
+
+  @getter 'internalText', ->
     unless '_text' of this
       if @_parseTree
-        @_text = ((if @_parseTree.doctype then "#{@_parseTree.doctype}\n" else '')) + domtohtml.domToHtml(@_parseTree, not @isPretty)
+        @_text = (if @_parseTree.doctype then "#{@_parseTree.doctype}\n" else '') + domtohtml.domToHtml(@_parseTree, not @isPretty)
       else
-        @_text = @_getTextFromRawSrc()
+        @_text = @_replaceTemplates(@_getTextFromRawSrc())
     @_text
+
+  _replaceTemplates: (text) ->
+    # Replace templating tags like PHP, JSP, Underscore template syntax etc They
+    # all use <>, which risks making the HTML invalid and JSDOM unable to parse
+    # it.
+    text.replace /<([%\?])[^\1]*?\1>/g, (match, sub1, offset) =>
+      key = "⋖#{offset}⋗"
+      @_templateReplacements[key] = match
+      key
+
+  @setter 'text', (text) ->
+    @unload()
+    @_text = @_replaceTemplates(text)
+    @populate() if @assetGraph
+    @markDirty()
 
   @getter 'parseTree', ->
     unless @_parseTree
-      text = @text
+      text = @internalText
       try
         # Compensate for jsdom 0.10.2+ creating
         # <html><head></head><body>...</body> around the document if text === ''
@@ -694,7 +722,4 @@ class Html extends Text
     @markDirty()
     this
 
-
-# Grrr...
-Html::__defineSetter__ 'text', Text::__lookupSetter__('text')
 module.exports = Html
