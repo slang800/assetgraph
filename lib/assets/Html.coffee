@@ -340,6 +340,16 @@ class Html extends Text
                   to: assetConfig
                   node: node
                 )
+            else if /(?:^| )logo(?:$| )/i.test(rel)
+              if @_isRelationUrl(node.getAttribute("href"))
+                assetConfig = url: node.getAttribute("href")
+                if node.hasAttribute("type")
+                  assetConfig.contentType = node.getAttribute("type")
+                addOutgoingRelation new AssetGraph.HtmlLogo(
+                  from: this
+                  to: assetConfig
+                  node: node
+                )
             else if /import/i.test(rel)
               if @_isRelationUrl(node.getAttribute('href'))
                 # HtmlImport specification:
