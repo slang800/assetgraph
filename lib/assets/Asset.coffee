@@ -591,6 +591,23 @@ class Asset extends EventEmitter
    * @readOnly
   ###
   @getter 'urlOrDescription', ->
-    @url or ("inline #{@type}#{if @nonInlineAncestor then " in #{@nonInlineAncestor.url}" else ''}")
+    makeRelativeToAssetGraphRootUrlIfPossible = (url) ->
+      if rootUrl and url.indexOf(rootUrl) is 0
+        "/#{url.substr(rootUrl.length)}"
+      else
+        url
+
+    rootUrl = @assetGraph and @assetGraph.root
+    if @url
+      makeRelativeToAssetGraphRootUrlIfPossible(@url)
+    else
+      "inline #{@type}#{
+        if @nonInlineAncestor
+          " in #{
+            makeRelativeToAssetGraphRootUrlIfPossible(@nonInlineAncestor.url)
+          }"
+        else
+          ''
+      }"
 
 module.exports = Asset
