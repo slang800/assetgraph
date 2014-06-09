@@ -356,6 +356,16 @@ class Html extends Text
                   to: assetConfig
                   node: node
                 )
+            else if /(?:^| )author(?:$| )/i.test(rel)
+              if @_isRelationUrl(node.getAttribute('href'))
+                assetConfig = url: node.getAttribute('href')
+                if node.hasAttribute('type')
+                  assetConfig.contentType = node.getAttribute('type')
+                addOutgoingRelation new AssetGraph.HtmlAuthorLink(
+                  from: this
+                  to: assetConfig
+                  node: node
+                )
             else if /(?:^| )search(?:$| )/i.test(rel)
               if @_isRelationUrl(node.getAttribute('href'))
                 assetConfig = url: node.getAttribute('href')
