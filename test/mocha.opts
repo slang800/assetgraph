@@ -1,1 +1,4 @@
 --compilers coffee:coffee-script/register
+--reporter spec
+--timeout 60000
+test/*.js test/{relations,assets,resolvers,transforms}/*.js

@@ -58,6 +58,6 @@
   "main": "lib",
   "scripts": {
     "test": "mocha",
-    "travis": "mocha -R spec"
+    "travis": "mocha"
   }
 }
