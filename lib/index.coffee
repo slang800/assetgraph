@@ -19,8 +19,6 @@ class AssetGraph extends EventEmitter
      the current directory, ie. `file://<process.cwd()>/`. The purpose of the
      root option is to allow resolution of root-relative urls (eg. `<a
      href="/foo.html">`) from `file:` locations.
-   * @param {Boolean} [options.dieOnError] Whether to throw an exception or
-     keep going when any error is encountered. Defaults to false.
    * @example
    * new AssetGraph()
    * // => root: "file:///current/working/dir/"
