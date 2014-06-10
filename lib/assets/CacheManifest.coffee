@@ -14,28 +14,28 @@ class CacheManifest extends Text
     unless @_parseTree
       parseTree = {}
       syntaxErrors = []
-      currentSectionName = "CACHE"
+      currentSectionName = 'CACHE'
       @text.split(/\r?\n|\n?\r/).forEach ((line, i) ->
         if i is 0
-          if line is "CACHE MANIFEST"
+          if line is 'CACHE MANIFEST'
             return # Skip
           else
-            console.warn "Warning: First line of cache manifest wasn't CACHE MANIFEST"
+            console.warn 'Warning: First line of cache manifest wasn\'t CACHE MANIFEST'
         matchNewSection = line.match(/^(CACHE|NETWORK|FALLBACK):\s*$/)
         if matchNewSection
           currentSectionName = matchNewSection[1]
         else unless /^\s*$/.test(line)
           parseTree[currentSectionName] = []  unless currentSectionName of parseTree
           if /^\s*#/.test(line)
-            parseTree[currentSectionName].push comment: line.replace(/^\s*#/, "")
+            parseTree[currentSectionName].push comment: line.replace(/^\s*#/, '')
           else
-            tokens = line.replace(/^\s+|\s+$/g).split(" ") # Trim just in case
+            tokens = line.replace(/^\s+|\s+$/g).split(' ') # Trim just in case
             node = undefined
-            if tokens.length is ((if currentSectionName is "FALLBACK" then 2 else 1))
+            if tokens.length is ((if currentSectionName is 'FALLBACK' then 2 else 1))
               parseTree[currentSectionName].push tokens: tokens
             else
               syntaxErrors.push new errors.SyntaxError(
-                message: "CacheManifest.parseTree getter: Parse error in section " + currentSectionName + ", line " + i + ": " + line
+                message: "CacheManifest.parseTree getter: Parse error in section #{currentSectionName}, line #{i}: #{line}"
                 line: i
               )
       ), this
@@ -45,7 +45,7 @@ class CacheManifest extends Text
             @assetGraph.emit 'warn', syntaxError
           ), this
         else
-          throw new Error(_.pluck(syntaxErrors, "message").join("\n"))
+          throw new Error(_.pluck(syntaxErrors, 'message').join('\n'))
       @_parseTree = parseTree
     @_parseTree
   set: (parseTree) ->
@@ -83,7 +83,7 @@ class CacheManifest extends Text
     # is predictable
     Object.keys(@parseTree).sort().forEach ((sectionName) ->
       nodes = @parseTree[sectionName]
-      if sectionName isnt "NETWORK"
+      if sectionName isnt 'NETWORK'
         nodes.forEach ((node) ->
           if node.tokens
             # In the CACHE section there's only one token per entry, in FALLBACK
