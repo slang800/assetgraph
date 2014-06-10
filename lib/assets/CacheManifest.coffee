@@ -54,22 +54,23 @@ class CacheManifest extends Text
     @markDirty()
 
   @getter 'text', ->
-    unless "_text" of this
+    unless '_text' of this
       if @_parseTree
         getSectionText = (nodes) ->
           nodes.map((node) ->
-            if "comment" of node
-              "#" + node.comment
+            if 'comment' of node
+              '#' + node.comment
             else
-              node.tokens.join " "
-          ).join("\n") + "\n"
-        @_text = "CACHE MANIFEST\n"
+              node.tokens.join ' '
+          ).join('\n') + '\n'
+        @_text = 'CACHE MANIFEST\n'
 
         # The heading for the CACHE section can be omitted if it's the first
         # thing in the manifest, so put it first if there is one.
         @_text += getSectionText(@_parseTree.CACHE)  if @_parseTree.CACHE
         _.each @_parseTree, ((nodes, sectionName) ->
-          @_text += sectionName + ":\n" + getSectionText(nodes)  if sectionName isnt "CACHE" and nodes.length
+          if sectionName isnt 'CACHE' and nodes.length
+            @_text += "#{sectionName}:\n#{getSectionText(nodes)}"
         ), this
       else
         @_text = @_getTextFromRawSrc()
@@ -78,15 +79,16 @@ class CacheManifest extends Text
   findOutgoingRelationsInParseTree: ->
     outgoingRelations = []
 
-    # Traverse the sections in alphabetical order so the order of the relations is predictable
+    # Traverse the sections in alphabetical order so the order of the relations
+    # is predictable
     Object.keys(@parseTree).sort().forEach ((sectionName) ->
       nodes = @parseTree[sectionName]
       if sectionName isnt "NETWORK"
         nodes.forEach ((node) ->
           if node.tokens
             # In the CACHE section there's only one token per entry, in FALLBACK
-            # there's the online URL followed by the offline URL (the one we want).
-            # Just pick the last token as the url.
+            # there's the online URL followed by the offline URL (the one we
+            # want). Just pick the last token as the url....
             outgoingRelations.push new AssetGraph.CacheManifestEntry(
               from: this
               to:
