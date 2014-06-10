@@ -1,7 +1,7 @@
 path = require 'path'
 EventEmitter = require('events').EventEmitter
 crypto = require 'crypto'
-_ = require 'underscore'
+_ = require 'lodash'
 urlTools = require 'urltools'
 resolveDataUrl = require '../util/resolveDataUrl'
 passError = require 'passerror'

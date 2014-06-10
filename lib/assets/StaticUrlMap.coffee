@@ -1,4 +1,4 @@
-_ = require 'underscore'
+_ = require 'lodash'
 AssetGraph = require '../'
 uglifyJs = require('./JavaScript').uglifyJs
 errors = require '../errors'
@@ -13,13 +13,13 @@ class StaticUrlMap extends Asset
   type: 'StaticUrlMap'
 
   contentType: null # Avoid reregistering application/octet-stream
-  
+
   supportedExtensions: []
-  
+
   findOutgoingRelationsInParseTree: ->
     outgoingRelations = []
     if @_parseTree[0] instanceof uglifyJs.AST_String
-      
+
       # GETSTATICURL('foo/bar', ...);
       url = @_parseTree[0].value
       @originalWildCardRelation = new AssetGraph.StaticUrlMapEntry(
@@ -31,7 +31,7 @@ class StaticUrlMap extends Asset
       @wildCardValueAsts = @_parseTree.slice(1)
       outgoingRelations.push @originalWildCardRelation
     else if @_parseTree[0] instanceof uglifyJs.AST_PropAccess
-      
+
       # GETSTATICURL({foo: "bar"}[...]);
       @relationByWildCardValues = {}
       @wildCardValueAsts = []
@@ -41,7 +41,7 @@ class StaticUrlMap extends Asset
         cursor = cursor.expression
       @wildCardValueAsts.reverse()
       keys = []
-      
+
       # node.properties[i].value instanceof uglifyJs.AST_Object
       populateUrlByWildCardValues = (node, relationByWildCardValuesCursor, nestingLevel) =>
         if nestingLevel > @wildCardValueAsts.length or not node or not (node instanceof uglifyJs.AST_Object)

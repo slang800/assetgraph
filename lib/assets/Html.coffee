@@ -1,4 +1,4 @@
-_ = require 'underscore'
+_ = require 'lodash'
 jsdom = require 'jsdom'
 domtohtml = require 'jsdom/lib/jsdom/browser/domtohtml'
 errors = require '../errors'

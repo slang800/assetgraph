@@ -1,4 +1,4 @@
-_ = require 'underscore'
+_ = require 'lodash'
 uglifyJs = require 'uglify-js-papandreou'
 uglifyAst = require('uglifyast')(uglifyJs)
 errors = require '../errors'

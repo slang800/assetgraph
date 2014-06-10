@@ -1,5 +1,5 @@
 util = require 'util'
-_ = require 'underscore'
+_ = require 'lodash'
 Asset = require './Asset'
 
 iconv = undefined

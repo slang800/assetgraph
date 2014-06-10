@@ -1,4 +1,4 @@
-_ = require 'underscore'
+_ = require 'lodash'
 cssom = require 'cssom-papandreou'
 cssmin = require 'cssmin'
 errors = require '../errors'
